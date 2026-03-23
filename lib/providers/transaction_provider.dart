@@ -1,0 +1,59 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../database/database_helper.dart';
+import '../models/transaction_model.dart';
+import 'wallet_provider.dart';
+import 'summary_provider.dart';
+
+
+final allTransactionsProvider = FutureProvider<List<TransactionModel>>((ref) async {
+  return await DatabaseHelper.instance.getAllTransactions();
+});
+
+final expenseTransactionsProvider = FutureProvider<List<TransactionModel>>((ref) async {
+  return await DatabaseHelper.instance.getTransactionsByType(TransactionType.expense);
+});
+
+final incomeTransactionsProvider = FutureProvider<List<TransactionModel>>((ref) async {
+  return await DatabaseHelper.instance.getTransactionsByType(TransactionType.income);
+});
+
+final transactionNotifierProvider =
+StateNotifierProvider<TransactionNotifier, AsyncValue<void>>((ref) {
+  return TransactionNotifier(ref);
+});
+
+class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
+  final Ref _ref;
+  TransactionNotifier(this._ref) : super(const AsyncValue.data(null));
+
+  Future<void> addTransaction(TransactionModel transaction) async {
+    state = const AsyncValue.loading();
+    try {
+      await DatabaseHelper.instance.insertTransaction(transaction);
+      // Refresh semua provider yang terkait
+      _ref.invalidate(allTransactionsProvider);
+      _ref.invalidate(expenseTransactionsProvider);
+      _ref.invalidate(incomeTransactionsProvider);
+      _ref.invalidate(walletProvider);
+      _ref.invalidate(summaryProvider);
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> deleteTransaction(int id) async {
+    state = const AsyncValue.loading();
+    try {
+      await DatabaseHelper.instance.deleteTransaction(id);
+      _ref.invalidate(allTransactionsProvider);
+      _ref.invalidate(expenseTransactionsProvider);
+      _ref.invalidate(incomeTransactionsProvider);
+      _ref.invalidate(walletProvider);
+      _ref.invalidate(summaryProvider);
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+}
