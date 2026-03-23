@@ -19,8 +19,20 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path,
+      version: 2, // ← naik dari 1 ke 2
+      onCreate: _createDB,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Reset semua wallet ke nonaktif — biarkan onboarding yang atur
+          await db.execute(
+              'UPDATE wallets SET showInExpense = 0, showInIncome = 0');
+        }
+      },
+    );
   }
+
 
   Future _createDB(Database db, int version) async {
     await db.execute('''
@@ -62,8 +74,8 @@ class DatabaseHelper {
 
   Future _insertDefaultWallets(Database db) async {
     final wallets = [
-      {'id': 'cash', 'name': 'Tunai', 'emoji': '💵', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
-      {'id': 'bca', 'name': 'BCA', 'emoji': '🏦', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
+      {'id': 'cash', 'name': 'Tunai', 'emoji': '💵', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
+      {'id': 'bca', 'name': 'BCA', 'emoji': '🏦', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
       {'id': 'bri', 'name': 'BRI', 'emoji': '🏦', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
       {'id': 'bni', 'name': 'BNI', 'emoji': '🏦', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
       {'id': 'mandiri', 'name': 'Mandiri', 'emoji': '🏦', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},

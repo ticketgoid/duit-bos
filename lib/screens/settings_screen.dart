@@ -6,6 +6,8 @@ import '../providers/preferences_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/transaction_provider.dart';
 import 'onboarding_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -50,28 +52,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _loadCurrentSettings() async {
     // Load nama user
-    final prefs = ref.read(preferencesNotifierProvider);
-    prefs.whenData((data) {
-      _nameController.text = data['user_name'] ?? 'Bos';
-    });
-
-    // Load wallet aktif dari DB
-    final wallets = await DatabaseHelper.instance.getAllWallets();
-    final active = wallets
-        .where((w) => w.showInExpense || w.showInIncome)
-        .map((w) => w.id)
-        .toSet();
-
-    if (mounted) {
-      setState(() {
-        _activeWallets = Set.from(active);
-        _originalActiveWallets = Set.from(active);
-        _loaded = true;
+    @override
+    void initState() {
+      super.initState();
+      // ✅ defer agar ref sudah ready
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadCurrentSettings();
       });
     }
-  }
 
-  void _toggleWallet(String id) {
+    Future<void> _loadCurrentSettings() async {
+      // ✅ Load nama user langsung dari SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final name = prefs.getString('user_name') ?? 'Bos';
+      if (mounted) _nameController.text = name;
+
+      // Load wallet aktif dari DB
+      final wallets = await DatabaseHelper.instance.getAllWallets();
+      final active = wallets
+          .where((w) => w.showInExpense || w.showInIncome)
+          .map((w) => w.id)
+          .toSet();
+
+      if (mounted) {
+        setState(() {
+          _activeWallets = Set.from(active);
+          _originalActiveWallets = Set.from(active);
+          _loaded = true;
+        });
+      }
+    }
+
+
+
+    void _toggleWallet(String id) {
     setState(() {
       if (_activeWallets.contains(id)) {
         if (_activeWallets.length > 1) {
@@ -154,8 +168,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.invalidate(allTransactionsProvider);
     ref.invalidate(expenseTransactionsProvider);
     ref.invalidate(incomeTransactionsProvider);
-    ref.invalidate(totalIncomeProvider);
-    ref.invalidate(totalExpenseProvider);
+    ref.invalidate(userNameProvider);
 
     if (mounted) {
       setState(() {
