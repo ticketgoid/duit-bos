@@ -76,17 +76,16 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
 
   Future<void> _saveTransaction() async {
     if (_amount == '0' || _selectedWallet == null || _selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Lengkapi nominal, wallet, dan kategori!',
-              style: GoogleFonts.nunito()),
-          backgroundColor: const Color(0xFF4CAF50),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Lengkapi nominal, wallet, dan kategori!',
+            style: GoogleFonts.nunito()),
+        backgroundColor: const Color(0xFF4CAF50),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ));
       return;
     }
+
     final transaction = TransactionModel(
       title: _selectedCategory!.name,
       amount: double.parse(_amount),
@@ -96,22 +95,23 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
       date: DateTime.now(),
       note: _noteController.text.isEmpty ? null : _noteController.text,
     );
-    await ref.read(transactionNotifierProvider.notifier).addTransaction(transaction);
+    await ref
+        .read(transactionNotifierProvider.notifier)
+        .addTransaction(transaction);
     setState(() {
       _amount = '0';
       _selectedCategory = null;
+      _selectedWallet = null;
       _noteController.clear();
     });
     if (mounted) {
       FocusScope.of(context).unfocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pemasukan tersimpan! 💰', style: GoogleFonts.nunito()),
-          backgroundColor: const Color(0xFF4CAF50),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Pemasukan tersimpan! 💰', style: GoogleFonts.nunito()),
+        backgroundColor: const Color(0xFF4CAF50),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ));
     }
   }
 
@@ -146,162 +146,99 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Header ──────────────────────────
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                    child: Row(
-                      children: [
-                        const Text('💰', style: TextStyle(fontSize: 28)),
-                        const SizedBox(width: 8),
-                        Text('Pemasukan',
-                            style: GoogleFonts.nunito(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF5C4A6E),
-                            )),
-                      ],
-                    ),
+                    child: Row(children: [
+                      const Text('💰', style: TextStyle(fontSize: 28)),
+                      const SizedBox(width: 8),
+                      Text('Pemasukan',
+                          style: GoogleFonts.nunito(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF5C4A6E),
+                          )),
+                    ]),
                   ),
 
                   const SizedBox(height: 14),
 
-                  // ── Nominal + Catatan ────────────────
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 14),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4))
                       ],
                     ),
-                    child: Column(
-                      children: [
-                        Text(
-                          _formattedAmount,
+                    child: Column(children: [
+                      Text(_formattedAmount,
                           style: GoogleFonts.nunito(
-                            fontSize: 34,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF4CAF50),
-                          ),
+                              fontSize: 34,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF4CAF50))),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: _noteController,
+                        style: GoogleFonts.nunito(
+                            fontSize: 14, color: const Color(0xFF5C4A6E)),
+                        decoration: InputDecoration(
+                          hintText: 'Catatan (opsional)...',
+                          hintStyle: GoogleFonts.nunito(
+                              color: const Color(0xFFCCBBDD)),
+                          border: InputBorder.none,
+                          isDense: true,
                         ),
-                        const SizedBox(height: 4),
-                        TextField(
-                          controller: _noteController,
-                          style: GoogleFonts.nunito(
-                            fontSize: 14,
-                            color: const Color(0xFF5C4A6E),
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'Catatan (opsional)...',
-                            hintStyle: GoogleFonts.nunito(
-                                color: const Color(0xFFCCBBDD)),
-                            border: InputBorder.none,
-                            isDense: true,
-                          ),
-                          textAlign: TextAlign.center,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => FocusScope.of(context).unfocus(),
-                        ),
-                      ],
-                    ),
+                        textAlign: TextAlign.center,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                      ),
+                    ]),
                   ),
 
                   const SizedBox(height: 14),
 
-                  // ── Label Wallet ─────────────────────
                   Padding(
                     padding: const EdgeInsets.only(left: 24, bottom: 8),
                     child: Text('Masuk ke mana? 💳',
                         style: GoogleFonts.nunito(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF5C4A6E),
-                        )),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF5C4A6E))),
                   ),
 
-                  // ── Wallet Chips ─────────────────────
+                  // ✅ Wallet Grid 2×3 fixed
                   walletsAsync.when(
-                    data: (wallets) => SizedBox(
-                      height: 42,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: wallets.length,
-                        itemBuilder: (context, index) {
-                          final wallet = wallets[index];
-                          final isSelected = _selectedWallet?.id == wallet.id;
-                          return GestureDetector(
-                            onTap: () => setState(() => _selectedWallet = wallet),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              margin: const EdgeInsets.only(right: 8),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? const Color(0xFF4CAF50)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(children: [
-                                Text(wallet.emoji,
-                                    style: const TextStyle(fontSize: 14)),
-                                const SizedBox(width: 5),
-                                Text(wallet.name,
-                                    style: GoogleFonts.nunito(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : const Color(0xFF5C4A6E),
-                                    )),
-                              ]),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    loading: () => const SizedBox(height: 42),
-                    error: (e, _) => const SizedBox(height: 42),
+                    data: (wallets) => _buildWalletGrid(wallets),
+                    loading: () => const SizedBox(height: 100),
+                    error: (e, _) => const SizedBox(height: 100),
                   ),
 
                   const SizedBox(height: 14),
 
-                  // ── Label Kategori ───────────────────
                   Padding(
                     padding: const EdgeInsets.only(left: 24, bottom: 8),
                     child: Text('Dari mana? 🤑',
                         style: GoogleFonts.nunito(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF5C4A6E),
-                        )),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF5C4A6E))),
                   ),
 
-                  // ── Kategori Chips ───────────────────
                   _buildCategoryPicker(),
 
                   const Spacer(),
 
-                  // ── Numpad ───────────────────────────
                   _buildNumpad(),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
 
-                  // ── Hint swipe ───────────────────────
+                  // ✅ Fix hint text
                   Center(
                     child: AnimatedBuilder(
                       animation: _hintAnimation,
@@ -316,14 +253,11 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
                           color: Colors.white.withOpacity(0.7),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text(
-                          '👆  swipe atas untuk riwayat pemasukan',
-                          style: GoogleFonts.nunito(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF9B8AAE),
-                          ),
-                        ),
+                        child: Text('👆  swipe bawah ke atas untuk riwayat',
+                            style: GoogleFonts.nunito(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF9B8AAE))),
                       ),
                     ),
                   ),
@@ -333,6 +267,63 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // ✅ Grid 2 baris × 3 kolom fixed
+  Widget _buildWalletGrid(List<WalletModel> wallets) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          childAspectRatio: 2.4,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+        ),
+        itemCount: wallets.length.clamp(0, 6),
+        itemBuilder: (context, index) {
+          final wallet = wallets[index];
+          final isSelected = _selectedWallet?.id == wallet.id;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedWallet = wallet),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFF4CAF50)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2))
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(wallet.emoji,
+                      style: const TextStyle(fontSize: 16)),
+                  const SizedBox(height: 2),
+                  Text(wallet.name,
+                      style: GoogleFonts.nunito(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF5C4A6E),
+                      ),
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -354,30 +345,32 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF5C4A6E) : Colors.white,
+                  color: isSelected
+                      ? const Color(0xFF5C4A6E)
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2))
                   ],
                 ),
-                child: Row(
-                  children: [
-                    Text(cat.emoji, style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 5),
-                    Text(cat.name,
-                        style: GoogleFonts.nunito(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isSelected ? Colors.white : const Color(0xFF5C4A6E),
-                        )),
-                  ],
-                ),
+                child: Row(children: [
+                  Text(cat.emoji, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 5),
+                  Text(cat.name,
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF5C4A6E),
+                      )),
+                ]),
               ),
             );
           },
@@ -392,72 +385,65 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
     final buttons = ['7','8','9','4','5','6','1','2','3','000','0','DEL'];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _saveTransaction,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4CAF50),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20)),
-              ),
-              child: Text('Simpan Pemasukan 💰',
-                  style: GoogleFonts.nunito(
+      child: Column(children: [
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _saveTransaction,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4CAF50),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+            ),
+            child: Text('Simpan Pemasukan 💰',
+                style: GoogleFonts.nunito(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  )),
-            ),
+                    color: Colors.white)),
           ),
-          const SizedBox(height: 10),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 2.6,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemCount: buttons.length,
-            itemBuilder: (context, index) {
-              final btn = buttons[index];
-              final isDel = btn == 'DEL';
-              return GestureDetector(
-                onTap: () => _onNumpad(btn),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isDel
-                        ? const Color(0xFF4CAF50).withOpacity(0.3)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
+        ),
+        const SizedBox(height: 10),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            childAspectRatio: 2.6,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+          ),
+          itemCount: buttons.length,
+          itemBuilder: (context, index) {
+            final btn = buttons[index];
+            final isDel = btn == 'DEL';
+            return GestureDetector(
+              onTap: () => _onNumpad(btn),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDel
+                      ? const Color(0xFF4CAF50).withOpacity(0.3)
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
                         color: Colors.black.withOpacity(0.05),
                         blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      isDel ? '⌫' : btn,
-                      style: GoogleFonts.nunito(
-                        fontSize: isDel ? 20 : 18,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF5C4A6E),
-                      ),
-                    ),
-                  ),
+                        offset: const Offset(0, 2))
+                  ],
                 ),
-              );
-            },
-          ),
-        ],
-      ),
+                child: Center(
+                  child: Text(isDel ? '⌫' : btn,
+                      style: GoogleFonts.nunito(
+                          fontSize: isDel ? 20 : 18,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF5C4A6E))),
+                ),
+              ),
+            );
+          },
+        ),
+      ]),
     );
   }
 }

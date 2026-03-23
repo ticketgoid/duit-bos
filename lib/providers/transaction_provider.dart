@@ -3,17 +3,38 @@ import '../database/database_helper.dart';
 import '../models/transaction_model.dart';
 import 'wallet_provider.dart';
 
-final allTransactionsProvider = FutureProvider<List<TransactionModel>>((ref) async {
+// ── Transaction list providers ────────────────────────────────
+
+final allTransactionsProvider =
+FutureProvider<List<TransactionModel>>((ref) async {
   return await DatabaseHelper.instance.getAllTransactions();
 });
 
-final expenseTransactionsProvider = FutureProvider<List<TransactionModel>>((ref) async {
-  return await DatabaseHelper.instance.getTransactionsByType(TransactionType.expense);
+final expenseTransactionsProvider =
+FutureProvider<List<TransactionModel>>((ref) async {
+  return await DatabaseHelper.instance
+      .getTransactionsByType(TransactionType.expense);
 });
 
-final incomeTransactionsProvider = FutureProvider<List<TransactionModel>>((ref) async {
-  return await DatabaseHelper.instance.getTransactionsByType(TransactionType.income);
+final incomeTransactionsProvider =
+FutureProvider<List<TransactionModel>>((ref) async {
+  return await DatabaseHelper.instance
+      .getTransactionsByType(TransactionType.income);
 });
+
+// ── Total providers ───────────────────────────────────────────
+
+final totalIncomeProvider = FutureProvider<double>((ref) async {
+  ref.watch(incomeTransactionsProvider);
+  return await DatabaseHelper.instance.getTotalByType(TransactionType.income);
+});
+
+final totalExpenseProvider = FutureProvider<double>((ref) async {
+  ref.watch(expenseTransactionsProvider);
+  return await DatabaseHelper.instance.getTotalByType(TransactionType.expense);
+});
+
+// ── Notifier ──────────────────────────────────────────────────
 
 final transactionNotifierProvider =
 StateNotifierProvider<TransactionNotifier, AsyncValue<void>>((ref) {
@@ -28,13 +49,7 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
     try {
       await DatabaseHelper.instance.insertTransaction(transaction);
-      _ref.invalidate(allTransactionsProvider);
-      _ref.invalidate(expenseTransactionsProvider);
-      _ref.invalidate(incomeTransactionsProvider);
-      _ref.invalidate(walletNotifierProvider);  // ✅ bukan walletProvider
-      _ref.invalidate(allWalletsProvider);
-      _ref.invalidate(totalIncomeProvider);
-      _ref.invalidate(totalExpenseProvider);
+      _invalidateAll();
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -45,16 +60,23 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
     try {
       await DatabaseHelper.instance.deleteTransaction(id);
-      _ref.invalidate(allTransactionsProvider);
-      _ref.invalidate(expenseTransactionsProvider);
-      _ref.invalidate(incomeTransactionsProvider);
-      _ref.invalidate(walletNotifierProvider);  // ✅ bukan walletProvider
-      _ref.invalidate(allWalletsProvider);
-      _ref.invalidate(totalIncomeProvider);
-      _ref.invalidate(totalExpenseProvider);
+      _invalidateAll();
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
+  }
+
+  // ✅ Satu method invalidate untuk semua provider terkait
+  void _invalidateAll() {
+    _ref.invalidate(allTransactionsProvider);
+    _ref.invalidate(expenseTransactionsProvider);
+    _ref.invalidate(incomeTransactionsProvider);
+    _ref.invalidate(totalIncomeProvider);
+    _ref.invalidate(totalExpenseProvider);
+    _ref.invalidate(walletNotifierProvider);
+    _ref.invalidate(allWalletsProvider);
+    _ref.invalidate(expenseWalletProvider);   // ✅ wallet chips expense refresh
+    _ref.invalidate(incomeWalletProvider);    // ✅ wallet chips income refresh
   }
 }

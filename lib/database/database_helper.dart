@@ -56,9 +56,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // Insert default wallets
     await _insertDefaultWallets(db);
-    // Insert default categories
     await _insertDefaultCategories(db);
   }
 
@@ -66,15 +64,15 @@ class DatabaseHelper {
     final wallets = [
       {'id': 'cash', 'name': 'Tunai', 'emoji': '💵', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
       {'id': 'bca', 'name': 'BCA', 'emoji': '🏦', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
-      {'id': 'bri', 'name': 'BRI', 'emoji': '🏦', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
-      {'id': 'bni', 'name': 'BNI', 'emoji': '🏦', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
-      {'id': 'mandiri', 'name': 'Mandiri', 'emoji': '🏦', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
-      {'id': 'seabank', 'name': 'SeaBank', 'emoji': '🌊', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
-      {'id': 'jago', 'name': 'Bank Jago', 'emoji': '🐆', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
-      {'id': 'gopay', 'name': 'GoPay', 'emoji': '🟢', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
-      {'id': 'shopee', 'name': 'ShopeePay', 'emoji': '🟠', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
-      {'id': 'ovo', 'name': 'OVO', 'emoji': '🟣', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
-      {'id': 'dana', 'name': 'DANA', 'emoji': '🔵', 'balance': 0.0, 'showInExpense': 1, 'showInIncome': 1},
+      {'id': 'bri', 'name': 'BRI', 'emoji': '🏦', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
+      {'id': 'bni', 'name': 'BNI', 'emoji': '🏦', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
+      {'id': 'mandiri', 'name': 'Mandiri', 'emoji': '🏦', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
+      {'id': 'seabank', 'name': 'SeaBank', 'emoji': '🌊', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
+      {'id': 'jago', 'name': 'Bank Jago', 'emoji': '🐆', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
+      {'id': 'gopay', 'name': 'GoPay', 'emoji': '🟢', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
+      {'id': 'shopee', 'name': 'ShopeePay', 'emoji': '🟠', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
+      {'id': 'ovo', 'name': 'OVO', 'emoji': '🟣', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
+      {'id': 'dana', 'name': 'DANA', 'emoji': '🔵', 'balance': 0.0, 'showInExpense': 0, 'showInIncome': 0},
     ];
     for (final w in wallets) {
       await db.insert('wallets', w);
@@ -83,7 +81,6 @@ class DatabaseHelper {
 
   Future _insertDefaultCategories(Database db) async {
     final categories = [
-      // Pengeluaran
       {'id': 'food', 'name': 'Makan & Minum', 'emoji': '🍜', 'type': 'expense'},
       {'id': 'transport', 'name': 'Transportasi', 'emoji': '🚗', 'type': 'expense'},
       {'id': 'shopping', 'name': 'Belanja', 'emoji': '🛍️', 'type': 'expense'},
@@ -91,7 +88,6 @@ class DatabaseHelper {
       {'id': 'entertainment', 'name': 'Hiburan', 'emoji': '🎮', 'type': 'expense'},
       {'id': 'bills', 'name': 'Tagihan', 'emoji': '📱', 'type': 'expense'},
       {'id': 'education', 'name': 'Pendidikan', 'emoji': '📚', 'type': 'expense'},
-      // Pemasukan
       {'id': 'salary', 'name': 'Gaji', 'emoji': '💼', 'type': 'income'},
       {'id': 'freelance', 'name': 'Freelance', 'emoji': '💻', 'type': 'income'},
       {'id': 'business', 'name': 'Bisnis', 'emoji': '🏪', 'type': 'income'},
@@ -103,12 +99,12 @@ class DatabaseHelper {
     }
   }
 
-  // ─── TRANSACTIONS ───────────────────────────────
+  // ─── TRANSACTIONS ────────────────────────────────────────────
 
   Future<int> insertTransaction(TransactionModel t) async {
     final db = await database;
     final id = await db.insert('transactions', t.toMap());
-    // Update wallet balance
+    // Update saldo wallet
     final wallet = await getWalletById(t.walletId);
     if (wallet != null) {
       final newBalance = t.type == TransactionType.income
@@ -136,12 +132,28 @@ class DatabaseHelper {
     return maps.map((m) => TransactionModel.fromMap(m)).toList();
   }
 
+  /// ✅ FIX: Rollback saldo wallet sebelum hapus transaksi
   Future<int> deleteTransaction(int id) async {
     final db = await database;
+
+    // Ambil data transaksi sebelum dihapus
+    final maps = await db.query('transactions', where: 'id = ?', whereArgs: [id]);
+    if (maps.isNotEmpty) {
+      final transaction = TransactionModel.fromMap(maps.first);
+      final wallet = await getWalletById(transaction.walletId);
+      if (wallet != null) {
+        // Rollback: balik arah operasi saldo
+        final restoredBalance = transaction.type == TransactionType.income
+            ? wallet.balance - transaction.amount  // income dihapus → kurangi saldo
+            : wallet.balance + transaction.amount; // expense dihapus → tambah saldo
+        await updateWalletBalance(transaction.walletId, restoredBalance);
+      }
+    }
+
     return await db.delete('transactions', where: 'id = ?', whereArgs: [id]);
   }
 
-  // ─── WALLETS ────────────────────────────────────
+  // ─── WALLETS ─────────────────────────────────────────────────
 
   Future<List<WalletModel>> getAllWallets() async {
     final db = await database;
@@ -158,22 +170,38 @@ class DatabaseHelper {
 
   Future<List<WalletModel>> getWalletsForExpense() async {
     final db = await database;
-    final maps = await db.query('wallets', where: 'showInExpense = ?', whereArgs: [1]);
+    final maps = await db.query(
+      'wallets',
+      where: 'showInExpense = ?',
+      whereArgs: [1],
+      limit: 6, // ✅ max 6 wallet aktif
+    );
     return maps.map((m) => WalletModel.fromMap(m)).toList();
   }
 
   Future<List<WalletModel>> getWalletsForIncome() async {
     final db = await database;
-    final maps = await db.query('wallets', where: 'showInIncome = ?', whereArgs: [1]);
+    final maps = await db.query(
+      'wallets',
+      where: 'showInIncome = ?',
+      whereArgs: [1],
+      limit: 6, // ✅ max 6 wallet aktif
+    );
     return maps.map((m) => WalletModel.fromMap(m)).toList();
   }
 
   Future updateWalletBalance(String id, double balance) async {
     final db = await database;
-    await db.update('wallets', {'balance': balance}, where: 'id = ?', whereArgs: [id]);
+    await db.update(
+      'wallets',
+      {'balance': balance},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
-  Future updateWalletVisibility(String id, {bool? showInExpense, bool? showInIncome}) async {
+  Future updateWalletVisibility(String id,
+      {bool? showInExpense, bool? showInIncome}) async {
     final db = await database;
     final updates = <String, dynamic>{};
     if (showInExpense != null) updates['showInExpense'] = showInExpense ? 1 : 0;
@@ -181,7 +209,14 @@ class DatabaseHelper {
     await db.update('wallets', updates, where: 'id = ?', whereArgs: [id]);
   }
 
-  // ─── CATEGORIES ─────────────────────────────────
+  /// Hapus semua transaksi milik wallet tertentu + reset saldo
+  Future deleteWalletData(String walletId) async {
+    final db = await database;
+    await db.delete('transactions', where: 'walletId = ?', whereArgs: [walletId]);
+    await updateWalletBalance(walletId, 0.0);
+  }
+
+  // ─── CATEGORIES ──────────────────────────────────────────────
 
   Future<List<CategoryModel>> getAllCategories() async {
     final db = await database;
@@ -209,17 +244,20 @@ class DatabaseHelper {
     return await db.delete('categories', where: 'id = ?', whereArgs: [id]);
   }
 
-  // ─── SUMMARY ────────────────────────────────────
+  // ─── SUMMARY ─────────────────────────────────────────────────
 
   Future<double> getTotalBalance() async {
     final db = await database;
-    final result = await db.rawQuery('SELECT SUM(balance) as total FROM wallets');
+    final result = await db.rawQuery(
+        'SELECT SUM(balance) as total FROM wallets WHERE showInExpense = 1 OR showInIncome = 1');
     return (result.first['total'] as double?) ?? 0.0;
   }
 
-  Future<double> getTotalByType(TransactionType type, {DateTime? from, DateTime? to}) async {
+  Future<double> getTotalByType(TransactionType type,
+      {DateTime? from, DateTime? to}) async {
     final db = await database;
-    String query = 'SELECT SUM(amount) as total FROM transactions WHERE type = ?';
+    String query =
+        'SELECT SUM(amount) as total FROM transactions WHERE type = ?';
     List<dynamic> args = [type.name];
     if (from != null) {
       query += ' AND date >= ?';

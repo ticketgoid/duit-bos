@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'providers/preferences_provider.dart';
 import 'screens/home_screen.dart';
+import 'screens/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,7 +68,24 @@ class DuitBosApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const HomeScreen(),
+      home: const _AppEntry(),
+    );
+  }
+}
+
+class _AppEntry extends ConsumerWidget {
+  const _AppEntry();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final onboardingAsync = ref.watch(onboardingDoneProvider);
+    return onboardingAsync.when(
+      data: (done) => done ? const HomeScreen() : const OnboardingScreen(),
+      loading: () => const Scaffold(
+        backgroundColor: Color(0xFFF0E6FF),
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => const OnboardingScreen(),
     );
   }
 }
