@@ -1,134 +1,254 @@
 import 'package:flutter/material.dart';
-import 'expense_screen.dart';
-import 'income_screen.dart';
-import 'history_screen.dart';
-import 'wallet_screen.dart';
-import '../providers/wallet_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/wallet_provider.dart';
+import 'history_screen.dart';
 
-
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  final PageController _verticalController = PageController(initialPage: 1);
-  final PageController _horizontalController = PageController(initialPage: 1);
-  bool _isOnHomePage = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _horizontalController.addListener(() {
-      final page = _horizontalController.page ?? 1;
-      setState(() {
-        _isOnHomePage = (page == 1.0);
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _verticalController.dispose();
-    _horizontalController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      body: NotificationListener<ScrollNotification>(
-        onNotification: (notification) {
-          // Blokir scroll vertikal parent jika BUKAN di homepage
-          if (!_isOnHomePage &&
-              notification.depth == 0 &&
-              notification is ScrollStartNotification) {
-            return true;
-          }
-          return false;
-        },
+      backgroundColor: const Color(0xFFF0E6FF),
+      body: SafeArea(
         child: PageView(
-          controller: _verticalController,
           scrollDirection: Axis.vertical,
-          physics: _isOnHomePage
-              ? const BouncingScrollPhysics()
-              : const NeverScrollableScrollPhysics(),
+          physics: const BouncingScrollPhysics(),
           children: [
-            const WalletScreen(),
-            PageView(
-              controller: _horizontalController,
-              physics: const BouncingScrollPhysics(),
-              children: [
-                const IncomeScreen(),
-                _buildHomePage(),
-                const ExpenseScreen(),
-              ],
-            ),
+            _DashboardPage(),
             const HistoryScreen(type: HistoryType.all),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildHomePage() {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF9F0),
-      body: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Spacer(),
-            const Text('🐱', style: TextStyle(fontSize: 72)),
-            const SizedBox(height: 12),
-            Text('Duit Bos', style: Theme.of(context).textTheme.displayLarge),
-            const SizedBox(height: 8),
-            Text(
-              'Kelola keuanganmu dengan gaya!',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+class _DashboardPage extends ConsumerWidget {
+  final currencyFormat = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  );
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final totalIncomeAsync = ref.watch(totalIncomeProvider);
+    final totalExpenseAsync = ref.watch(totalExpenseProvider);
+    final walletsAsync = ref.watch(allWalletsProvider);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Greeting ──────────────────────────────
+          Text('Halo, Bos! 👋',
+              style: GoogleFonts.nunito(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF5C4A6E),
+              )),
+          Text('Yuk cek keuanganmu hari ini',
+              style: GoogleFonts.nunito(
+                fontSize: 14,
                 color: const Color(0xFF9B8AAE),
+              )),
+
+          const SizedBox(height: 24),
+
+          // ── Balance Card ───────────────────────────
+          _buildBalanceCard(totalIncomeAsync, totalExpenseAsync),
+
+          const SizedBox(height: 20),
+
+          // ── Ringkasan Pemasukan & Pengeluaran ──────
+          Row(children: [
+            Expanded(
+                child: _buildSummaryCard(
+                  '💰 Pemasukan',
+                  totalIncomeAsync,
+                  const Color(0xFF4CAF50),
+                  const Color(0xFFB8F0C8),
+                )),
+            const SizedBox(width: 12),
+            Expanded(
+                child: _buildSummaryCard(
+                  '💸 Pengeluaran',
+                  totalExpenseAsync,
+                  const Color(0xFFFF8FAB),
+                  const Color(0xFFFFD6E0),
+                )),
+          ]),
+
+          const SizedBox(height: 20),
+
+          // ── Daftar Wallet ──────────────────────────
+          Text('Dompetku 👜',
+              style: GoogleFonts.nunito(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF5C4A6E),
+              )),
+          const SizedBox(height: 10),
+          walletsAsync.when(
+            data: (wallets) => Column(
+              children: wallets
+                  .map((w) => _buildWalletCard(w.emoji, w.name, w.balance))
+                  .toList(),
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => const SizedBox(),
+          ),
+
+          const SizedBox(height: 28),
+
+          // ── Hint swipe ─────────────────────────────
+          Center(
+            child: Container(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '👆  swipe atas untuk semua riwayat',
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF9B8AAE),
+                ),
               ),
             ),
-            const Spacer(),
-            _buildSwipeHint(),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSwipeHint() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      child: Column(
-        children: [
-          _hintRow('👆', 'Swipe atas', 'Semua riwayat'),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _hintChip('👈 Pengeluaran'),
-              _hintChip('Pemasukan 👉'),
-            ],
           ),
-          const SizedBox(height: 8),
-          _hintRow('👇', 'Swipe bawah', 'Lihat dompet'),
         ],
       ),
     );
   }
 
-  Widget _hintRow(String emoji, String label, String sub) {
+  Widget _buildBalanceCard(totalIncomeAsync, totalExpenseAsync) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF9B8AAE), Color(0xFF5C4A6E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF5C4A6E).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Total Saldo',
+              style: GoogleFonts.nunito(
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.8),
+              )),
+          const SizedBox(height: 8),
+          totalIncomeAsync.when(
+            data: (income) => totalExpenseAsync.when(
+              data: (expense) {
+                final balance = income - expense;
+                return Text(
+                  NumberFormat.currency(
+                    locale: 'id_ID',
+                    symbol: 'Rp ',
+                    decimalDigits: 0,
+                  ).format(balance),
+                  style: GoogleFonts.nunito(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                );
+              },
+              loading: () => const CircularProgressIndicator(color: Colors.white),
+              error: (e, _) => const SizedBox(),
+            ),
+            loading: () =>
+            const CircularProgressIndicator(color: Colors.white),
+            error: (e, _) => const SizedBox(),
+          ),
+          const SizedBox(height: 4),
+          Text('Pemasukan − Pengeluaran',
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.6),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(
+      String label, AsyncValue<double> asyncVal, Color textColor, Color bgColor) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF5C4A6E),
+              )),
+          const SizedBox(height: 6),
+          asyncVal.when(
+            data: (val) => Text(
+              NumberFormat.currency(
+                locale: 'id_ID',
+                symbol: 'Rp ',
+                decimalDigits: 0,
+              ).format(val),
+              style: GoogleFonts.nunito(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: textColor,
+              ),
+            ),
+            loading: () => const SizedBox(
+                height: 16,
+                width: 16,
+                child: CircularProgressIndicator(strokeWidth: 2)),
+            error: (e, _) => const SizedBox(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWalletCard(String emoji, String name, double balance) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -138,41 +258,31 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 18)),
-          const SizedBox(width: 8),
-          Text('$label — $sub',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF9B8AAE),
-              )),
-        ],
-      ),
-    );
-  }
-
-  Widget _hintChip(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+          Text(emoji, style: const TextStyle(fontSize: 28)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(name,
+                style: GoogleFonts.nunito(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF5C4A6E),
+                )),
+          ),
+          Text(
+            NumberFormat.currency(
+              locale: 'id_ID',
+              symbol: 'Rp ',
+              decimalDigits: 0,
+            ).format(balance),
+            style: GoogleFonts.nunito(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF9B8AAE),
+            ),
           ),
         ],
       ),
-      child: Text(text,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF9B8AAE),
-          )),
     );
   }
 }
