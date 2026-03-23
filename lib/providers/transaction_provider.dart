@@ -2,8 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/database_helper.dart';
 import '../models/transaction_model.dart';
 import 'wallet_provider.dart';
-import 'summary_provider.dart';
-
 
 final allTransactionsProvider = FutureProvider<List<TransactionModel>>((ref) async {
   return await DatabaseHelper.instance.getAllTransactions();
@@ -30,12 +28,13 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
     try {
       await DatabaseHelper.instance.insertTransaction(transaction);
-      // Refresh semua provider yang terkait
       _ref.invalidate(allTransactionsProvider);
       _ref.invalidate(expenseTransactionsProvider);
       _ref.invalidate(incomeTransactionsProvider);
-      _ref.invalidate(walletProvider);
-      _ref.invalidate(summaryProvider);
+      _ref.invalidate(walletNotifierProvider);  // ✅ bukan walletProvider
+      _ref.invalidate(allWalletsProvider);
+      _ref.invalidate(totalIncomeProvider);
+      _ref.invalidate(totalExpenseProvider);
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -49,8 +48,10 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
       _ref.invalidate(allTransactionsProvider);
       _ref.invalidate(expenseTransactionsProvider);
       _ref.invalidate(incomeTransactionsProvider);
-      _ref.invalidate(walletProvider);
-      _ref.invalidate(summaryProvider);
+      _ref.invalidate(walletNotifierProvider);  // ✅ bukan walletProvider
+      _ref.invalidate(allWalletsProvider);
+      _ref.invalidate(totalIncomeProvider);
+      _ref.invalidate(totalExpenseProvider);
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
