@@ -64,7 +64,6 @@ flutter:
         - asset: assets/fonts/Nunito-Bold.ttf
         - asset: assets/fonts/Nunito-ExtraBold.ttf
   assets:
-    - assets/images/
     - assets/fonts/
     - assets/logos/BCA.png
     - assets/logos/BRI.png
@@ -75,4 +74,4 @@ flutter:
     - assets/logos/OVO.png
     - assets/logos/SeaBank.png
     - assets/logos/ShoppePay.png
-    - assets/Logo-DuitBos-10.jpg
+    - assets/DuitBos.png
