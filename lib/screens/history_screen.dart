@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../providers/transaction_provider.dart';
+import '../utils/wallet_logo.dart'; // ✅ TAMBAH INI
 
 enum HistoryType { all, expense, income }
 
@@ -56,11 +57,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   }
 
   // ✅ FIX Bug 2: hitung perPage dari tinggi layar
-  // tinggi card ≈ 72px (padding v:12 + konten ~48px + margin bottom 8px)
-  // sisihkan: header ~56px + page indicator ~44px + safe area ~20px
   int _calcPerPage(double availableHeight) {
     const double cardHeight = 72.0;
-    const double overhead = 160.0; // ✅ dinaikkan dari 120 → 160 untuk buffer
+    const double overhead = 160.0;
     final usable = availableHeight - overhead;
     final count = (usable / cardHeight).floor();
     return count.clamp(4, 12);
@@ -354,7 +353,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     return GestureDetector(
       onLongPress: () => _confirmDelete(context, ref, t),
       child: Container(
-        // ✅ FIX Bug 2: ukuran card wajar, total ~72px per item
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
@@ -370,6 +368,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         ),
         child: Row(
           children: [
+            // ✅ DIUBAH: background warna tetap, isi pakai walletLogo
             Container(
               width: 44,
               height: 44,
@@ -379,10 +378,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     : const Color(0xFFB8F0C8),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: Center(
-                child: Text(isExpense ? '💸' : '💰',
-                    style: const TextStyle(fontSize: 20)),
-              ),
+              padding: const EdgeInsets.all(8),
+              child: walletLogo(t.walletId, size: 28), // ✅ logo bank/ewallet
             ),
             const SizedBox(width: 12),
             Expanded(
