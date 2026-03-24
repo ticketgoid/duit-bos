@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -25,22 +26,16 @@ Future<void> initNotifications() async {
 
 Future<void> scheduleNoteNotifications(NoteModel note) async {
   await initNotifications();
-  if (note.reminderDate == null ||
-      note.reminderType == ReminderType.none) return;
-
-  // Cancel existing notifications for this note
+  if (note.reminderDate == null || note.reminderType == ReminderType.none) return;
   await cancelNoteNotifications(note.id);
-
   final daysMap = {
     ReminderType.onDay: <int>[0],
     ReminderType.h3Daily: [3, 2, 1, 0],
     ReminderType.h5Daily: [5, 4, 3, 2, 1, 0],
     ReminderType.h7Daily: [7, 6, 5, 4, 3, 2, 1, 0],
   };
-
   final days = daysMap[note.reminderType] ?? [];
   final idBase = note.id.hashCode.abs();
-
   for (int i = 0; i < days.length; i++) {
     final d = days[i];
     final scheduledDate = note.reminderDate!.subtract(Duration(days: d));
@@ -49,15 +44,11 @@ Future<void> scheduleNoteNotifications(NoteModel note) async {
       tz.local,
     );
     if (tzDate.isBefore(tz.TZDateTime.now(tz.local))) continue;
-
-    final title = d == 0
-        ? '⏰ Jatuh tempo hari ini!'
-        : '🔔 Pengingat H-$d';
+    final title = d == 0 ? '⏰ Jatuh tempo hari ini!' : '🔔 Pengingat H-$d';
     final body = note.title +
         (note.amount > 0
             ? ' • Rp ${NumberFormat('#,###', 'id_ID').format(note.amount)}'
             : '');
-
     await _notifPlugin.zonedSchedule(
       idBase + i,
       title,
@@ -101,7 +92,6 @@ class NotesScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
               child: Row(children: [
@@ -112,12 +102,9 @@ class NotesScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 6)],
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6)],
                     ),
-                    child: const Icon(Icons.arrow_back_ios_new,
-                        size: 16, color: Color(0xFF5C4A6E)),
+                    child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Color(0xFF5C4A6E)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -142,9 +129,7 @@ class NotesScreen extends ConsumerWidget {
                 ),
               ]),
             ),
-
             const SizedBox(height: 16),
-
             Expanded(
               child: notesAsync.when(
                 data: (notes) {
@@ -163,40 +148,33 @@ class NotesScreen extends ConsumerWidget {
                           const SizedBox(height: 8),
                           Text('Tap + untuk buat catatan baru',
                               style: GoogleFonts.nunito(
-                                  fontSize: 13,
-                                  color: const Color(0xFFCCBBDD))),
+                                  fontSize: 13, color: const Color(0xFFCCBBDD))),
                         ],
                       ),
                     );
                   }
-
                   final pinned = notes.where((n) => n.isPinned).toList();
                   final unpinned = notes.where((n) => !n.isPinned).toList();
                   final sorted = [...pinned, ...unpinned];
-
                   return ListView.builder(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                     itemCount: sorted.length,
-                    itemBuilder: (_, i) =>
-                        _NoteCard(
-                          note: sorted[i],
-                          fmt: fmt,
-                          onEdit: () => _showNoteSheet(context, ref, note: sorted[i]),
-                          onDelete: () => _confirmDelete(context, ref, sorted[i]),
-                          onTogglePin: () =>
-                              ref.read(noteNotifierProvider.notifier)
-                                  .updateNote(sorted[i].copyWith(
-                                  isPinned: !sorted[i].isPinned)),
-                          onToggleCheck: () =>
-                              ref.read(noteNotifierProvider.notifier)
-                                  .updateNote(sorted[i].copyWith(
-                                  isChecked: !sorted[i].isChecked)),
-                          onPayNow: () => _handlePayNow(context, sorted[i]),
-                        ),
+                    itemBuilder: (_, i) => _NoteCard(
+                      note: sorted[i],
+                      fmt: fmt,
+                      onEdit: () => _showNoteSheet(context, ref, note: sorted[i]),
+                      onDelete: () => _confirmDelete(context, ref, sorted[i]),
+                      onTogglePin: () => ref
+                          .read(noteNotifierProvider.notifier)
+                          .updateNote(sorted[i].copyWith(isPinned: !sorted[i].isPinned)),
+                      onToggleCheck: () => ref
+                          .read(noteNotifierProvider.notifier)
+                          .updateNote(sorted[i].copyWith(isChecked: !sorted[i].isChecked)),
+                      onPayNow: () => _handlePayNow(context, sorted[i]),
+                    ),
                   );
                 },
-                loading: () =>
-                const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(child: Text('Error: $e')),
               ),
             ),
@@ -207,39 +185,31 @@ class NotesScreen extends ConsumerWidget {
   }
 
   void _handlePayNow(BuildContext context, NoteModel note) {
-    // Navigasi ke expense via PageView — pop dulu lalu trigger swipe
     Navigator.pop(context, {'payNow': true, 'note': note});
   }
 
-  Future<void> _confirmDelete(
-      BuildContext context, WidgetRef ref, NoteModel note) async {
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, NoteModel note) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Hapus catatan?',
-            style: GoogleFonts.nunito(
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF5C4A6E))),
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w800, color: const Color(0xFF5C4A6E))),
         content: Text('Catatan "${note.title}" akan dihapus permanen.',
-            style: GoogleFonts.nunito(
-                fontSize: 13, color: const Color(0xFF9B8AAE))),
+            style: GoogleFonts.nunito(fontSize: 13, color: const Color(0xFF9B8AAE))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal',
-                style: GoogleFonts.nunito(color: const Color(0xFF9B8AAE))),
+            child: Text('Batal', style: GoogleFonts.nunito(color: const Color(0xFF9B8AAE))),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.redAccent,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: Text('Hapus',
-                style: GoogleFonts.nunito(
-                    color: Colors.white, fontWeight: FontWeight.w700)),
+                style: GoogleFonts.nunito(color: Colors.white, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -250,12 +220,12 @@ class NotesScreen extends ConsumerWidget {
     }
   }
 
-  void _showNoteSheet(BuildContext context, WidgetRef ref,
-      {NoteModel? note}) {
+  void _showNoteSheet(BuildContext context, WidgetRef ref, {NoteModel? note}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      useSafeArea: true,
       builder: (ctx) => _NoteFormSheet(
         existing: note,
         onSave: (newNote) async {
@@ -308,17 +278,23 @@ class _NoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
     final isOverdue = note.reminderDate != null &&
-        note.reminderDate!.isBefore(DateTime.now()) &&
+        note.reminderDate!.isBefore(now) &&
         !note.isChecked;
+    // ✅ FIX 2: status lunas vs belum bayar vs overdue
+    final isPaid = note.isChecked;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        // ✅ FIX 2: warna kartu berbeda berdasarkan status
+        color: isPaid ? const Color(0xFFF5FFF7) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: isOverdue
-            ? Border.all(color: Colors.redAccent.withOpacity(0.4), width: 1.5)
+            ? Border.all(color: Colors.redAccent.withOpacity(0.5), width: 1.5)
+            : isPaid
+            ? Border.all(color: const Color(0xFF4CAF50).withOpacity(0.4), width: 1.5)
             : null,
         boxShadow: [
           BoxShadow(
@@ -332,7 +308,6 @@ class _NoteCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Row 1: label + pin + check
             Row(children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -345,6 +320,32 @@ class _NoteCard extends StatelessWidget {
                         fontSize: 11, fontWeight: FontWeight.w700,
                         color: const Color(0xFF5C4A6E))),
               ),
+              const SizedBox(width: 6),
+              // ✅ FIX 2: badge status
+              if (isPaid)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('✅ Lunas',
+                      style: GoogleFonts.nunito(
+                          fontSize: 11, fontWeight: FontWeight.w700,
+                          color: Colors.white)),
+                )
+              else if (isOverdue)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('⚠️ Overdue',
+                      style: GoogleFonts.nunito(
+                          fontSize: 11, fontWeight: FontWeight.w700,
+                          color: Colors.white)),
+                ),
               const Spacer(),
               if (note.isPinned)
                 const Padding(
@@ -356,18 +357,16 @@ class _NoteCard extends StatelessWidget {
                 child: Container(
                   width: 22, height: 22,
                   decoration: BoxDecoration(
-                    color: note.isChecked
-                        ? const Color(0xFF4CAF50)
-                        : Colors.transparent,
+                    color: isPaid ? const Color(0xFF4CAF50) : Colors.transparent,
                     border: Border.all(
-                      color: note.isChecked
+                      color: isPaid
                           ? const Color(0xFF4CAF50)
                           : const Color(0xFFCCBBDD),
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: note.isChecked
+                  child: isPaid
                       ? const Icon(Icons.check, size: 14, color: Colors.white)
                       : null,
                 ),
@@ -376,17 +375,12 @@ class _NoteCard extends StatelessWidget {
 
             const SizedBox(height: 8),
 
-            // Title
             Text(note.title,
                 style: GoogleFonts.nunito(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
-                  color: note.isChecked
-                      ? const Color(0xFFCCBBDD)
-                      : const Color(0xFF5C4A6E),
-                  decoration: note.isChecked
-                      ? TextDecoration.lineThrough
-                      : null,
+                  color: isPaid ? const Color(0xFF9B8AAE) : const Color(0xFF5C4A6E),
+                  decoration: isPaid ? TextDecoration.lineThrough : null,
                 )),
 
             if (note.content != null && note.content!.isNotEmpty) ...[
@@ -400,7 +394,6 @@ class _NoteCard extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            // Amount + reminder date
             Row(children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -421,6 +414,8 @@ class _NoteCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isOverdue
                         ? const Color(0xFFFFD6E0)
+                        : isPaid
+                        ? const Color(0xFFB8F0C8)
                         : const Color(0xFFF0E6FF),
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -431,6 +426,8 @@ class _NoteCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: isOverdue
                             ? Colors.redAccent
+                            : isPaid
+                            ? const Color(0xFF4CAF50)
                             : const Color(0xFF9B8AAE)),
                   ),
                 ),
@@ -438,32 +435,54 @@ class _NoteCard extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            // Action buttons
             Row(children: [
-              // Bayar Sekarang
-              if (!note.isChecked)
+              // ✅ FIX 2: Bayar Sekarang hanya muncul jika belum lunas
+              if (!isPaid)
                 Expanded(
                   child: GestureDetector(
                     onTap: onPayNow,
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF5C4A6E),
+                        color: isOverdue
+                            ? Colors.redAccent
+                            : const Color(0xFF5C4A6E),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
-                        child: Text('💸 Bayar Sekarang',
-                            style: GoogleFonts.nunito(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            )),
+                        child: Text(
+                          isOverdue ? '⚠️ Bayar Segera!' : '💸 Bayar Sekarang',
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              if (!note.isChecked) const SizedBox(width: 8),
-              // Edit
+              // ✅ FIX 2: jika sudah lunas tampilkan info lunas
+              if (isPaid)
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFB8F0C8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text('✅ Sudah Dibayar',
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF4CAF50),
+                          )),
+                    ),
+                  ),
+                ),
+              if (!isPaid) const SizedBox(width: 8),
+              if (isPaid) const SizedBox(width: 8),
               GestureDetector(
                 onTap: onEdit,
                 child: Container(
@@ -472,12 +491,10 @@ class _NoteCard extends StatelessWidget {
                     color: const Color(0xFFF0E6FF),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.edit, size: 16,
-                      color: Color(0xFF9B8AAE)),
+                  child: const Icon(Icons.edit, size: 16, color: Color(0xFF9B8AAE)),
                 ),
               ),
               const SizedBox(width: 6),
-              // Pin
               GestureDetector(
                 onTap: onTogglePin,
                 child: Container(
@@ -493,7 +510,6 @@ class _NoteCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              // Delete
               GestureDetector(
                 onTap: onDelete,
                 child: Container(
@@ -502,8 +518,7 @@ class _NoteCard extends StatelessWidget {
                     color: const Color(0xFFFFD6E0),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.delete_outline,
-                      size: 16, color: Colors.redAccent),
+                  child: const Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
                 ),
               ),
             ]),
@@ -535,17 +550,43 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
   DateTime? _reminderDate;
   bool _saving = false;
 
+  // ✅ FIX 4: formatter untuk nominal rupiah
+  final _amountFmt = NumberFormat('#,###', 'id_ID');
+  bool _isFormattingAmount = false;
+
   @override
   void initState() {
     super.initState();
     final e = widget.existing;
     _titleCtrl = TextEditingController(text: e?.title ?? '');
     _contentCtrl = TextEditingController(text: e?.content ?? '');
+    // ✅ FIX 4: init dengan format rupiah jika sudah ada nilai
     _amountCtrl = TextEditingController(
-        text: e != null && e.amount > 0 ? e.amount.toInt().toString() : '');
+        text: e != null && e.amount > 0
+            ? _amountFmt.format(e.amount.toInt())
+            : '');
     _label = e?.label ?? NoteLabel.reminder;
     _reminderType = e?.reminderType ?? ReminderType.none;
     _reminderDate = e?.reminderDate;
+
+    // ✅ FIX 4: listener untuk format otomatis saat ketik
+    _amountCtrl.addListener(_formatAmount);
+  }
+
+  void _formatAmount() {
+    if (_isFormattingAmount) return;
+    final text = _amountCtrl.text;
+    if (text.isEmpty) return;
+    final raw = text.replaceAll('.', '').replaceAll(',', '');
+    final number = int.tryParse(raw);
+    if (number == null) return;
+    _isFormattingAmount = true;
+    final formatted = _amountFmt.format(number);
+    _amountCtrl.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+    _isFormattingAmount = false;
   }
 
   @override
@@ -558,165 +599,210 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: EdgeInsets.fromLTRB(
-          20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 24),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE0D0F0),
-                  borderRadius: BorderRadius.circular(2),
+    // ✅ FIX 1: Gunakan AnimatedPadding untuk transisi keyboard yang smooth
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0D0F0),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(widget.existing == null ? '📝 Catatan Baru' : 'Edit Catatan',
-                style: GoogleFonts.nunito(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF5C4A6E))),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+              Text(widget.existing == null ? '📝 Catatan Baru' : 'Edit Catatan',
+                  style: GoogleFonts.nunito(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF5C4A6E))),
+              const SizedBox(height: 16),
 
-            // Judul
-            _label2('Judul'),
-            _field(_titleCtrl, 'Nama catatan...'),
-            const SizedBox(height: 12),
+              _label2('Judul'),
+              _field(_titleCtrl, 'Nama catatan...'),
+              const SizedBox(height: 12),
 
-            // Nominal (wajib)
-            _label2('Nominal (wajib)'),
-            _field(_amountCtrl, 'Rp 0', isNumber: true),
-            const SizedBox(height: 12),
+              // ✅ FIX 4: nominal dengan prefix Rp dan format titik
+              _label2('Nominal (wajib)'),
+              _amountField(),
+              const SizedBox(height: 12),
 
-            // Catatan opsional
-            _label2('Catatan (opsional)'),
-            _field(_contentCtrl, 'Tulis detail...', maxLines: 3),
-            const SizedBox(height: 12),
+              _label2('Catatan (opsional)'),
+              _field(_contentCtrl, 'Tulis detail...', maxLines: 3),
+              const SizedBox(height: 12),
 
-            // Label
-            _label2('Label'),
-            Wrap(
-              spacing: 8,
-              children: NoteLabel.values.map((l) {
-                final names = {
-                  NoteLabel.reminder: '🔔 Pengingat',
-                  NoteLabel.budget: '💰 Budget',
-                  NoteLabel.plan: '📋 Rencana',
-                  NoteLabel.other: '📌 Lainnya',
-                };
-                return GestureDetector(
-                  onTap: () => setState(() => _label = l),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _label == l
-                          ? const Color(0xFF5C4A6E)
-                          : const Color(0xFFF0E6FF),
-                      borderRadius: BorderRadius.circular(10),
+              // ✅ FIX 3: Label diperbesar dan lebih rapi dengan runSpacing
+              _label2('Label'),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: NoteLabel.values.map((l) {
+                  final names = {
+                    NoteLabel.reminder: '🔔 Pengingat',
+                    NoteLabel.budget: '💰 Budget',
+                    NoteLabel.plan: '📋 Rencana',
+                    NoteLabel.other: '📌 Lainnya',
+                  };
+                  return GestureDetector(
+                    onTap: () => setState(() => _label = l),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10), // ✅ padding lebih besar
+                      decoration: BoxDecoration(
+                        color: _label == l
+                            ? const Color(0xFF5C4A6E)
+                            : const Color(0xFFF0E6FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(names[l]!,
+                          style: GoogleFonts.nunito(
+                            fontSize: 14, // ✅ font lebih besar
+                            fontWeight: FontWeight.w700,
+                            color: _label == l
+                                ? Colors.white
+                                : const Color(0xFF9B8AAE),
+                          )),
                     ),
-                    child: Text(names[l]!,
-                        style: GoogleFonts.nunito(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: _label == l
-                              ? Colors.white
-                              : const Color(0xFF9B8AAE),
-                        )),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 12),
-
-            // Tanggal jatuh tempo
-            _label2('Tanggal Jatuh Tempo'),
-            GestureDetector(
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _reminderDate ?? DateTime.now(),
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
-                );
-                if (picked != null) setState(() => _reminderDate = picked);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0E6FF),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(children: [
-                  const Text('📅', style: TextStyle(fontSize: 16)),
-                  const SizedBox(width: 8),
-                  Text(
-                    _reminderDate != null
-                        ? DateFormat('d MMMM yyyy', 'id_ID')
-                        .format(_reminderDate!)
-                        : 'Pilih tanggal...',
-                    style: GoogleFonts.nunito(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: _reminderDate != null
-                          ? const Color(0xFF5C4A6E)
-                          : const Color(0xFFCCBBDD),
-                    ),
-                  ),
-                ]),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Pengingat
-            if (_reminderDate != null) ...[
-              _label2('Pengingat'),
-              Column(
-                children: [
-                  _reminderOption(ReminderType.none, '🔕 Tidak ada pengingat'),
-                  _reminderOption(ReminderType.onDay, '🔔 Saat jatuh tempo saja'),
-                  _reminderOption(ReminderType.h3Daily, '📅 Tiap hari mulai H-3'),
-                  _reminderOption(ReminderType.h5Daily, '📅 Tiap hari mulai H-5'),
-                  _reminderOption(ReminderType.h7Daily, '📅 Tiap hari mulai H-7'),
-                ],
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 12),
-            ],
 
-            // Simpan
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _saving ? null : _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5C4A6E),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+              _label2('Tanggal Jatuh Tempo'),
+              GestureDetector(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _reminderDate ?? DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                  );
+                  if (picked != null) setState(() => _reminderDate = picked);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0E6FF),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(children: [
+                    const Text('📅', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 8),
+                    Text(
+                      _reminderDate != null
+                          ? DateFormat('d MMMM yyyy', 'id_ID').format(_reminderDate!)
+                          : 'Pilih tanggal...',
+                      style: GoogleFonts.nunito(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: _reminderDate != null
+                            ? const Color(0xFF5C4A6E)
+                            : const Color(0xFFCCBBDD),
+                      ),
+                    ),
+                  ]),
                 ),
-                child: _saving
-                    ? const SizedBox(
-                    width: 20, height: 20,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2))
-                    : Text('Simpan',
-                    style: GoogleFonts.nunito(
-                        fontSize: 15, fontWeight: FontWeight.w700)),
+              ),
+              const SizedBox(height: 12),
+
+              if (_reminderDate != null) ...[
+                _label2('Pengingat'),
+                Column(
+                  children: [
+                    _reminderOption(ReminderType.none, '🔕 Tidak ada pengingat'),
+                    _reminderOption(ReminderType.onDay, '🔔 Saat jatuh tempo saja'),
+                    _reminderOption(ReminderType.h3Daily, '📅 Tiap hari mulai H-3'),
+                    _reminderOption(ReminderType.h5Daily, '📅 Tiap hari mulai H-5'),
+                    _reminderOption(ReminderType.h7Daily, '📅 Tiap hari mulai H-7'),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF5C4A6E),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: _saving
+                      ? const SizedBox(
+                      width: 20, height: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                      : Text('Simpan',
+                      style: GoogleFonts.nunito(
+                          fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ✅ FIX 4: field nominal khusus dengan prefix Rp
+  Widget _amountField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0E6FF),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: const BoxDecoration(
+              color: Color(0xFF5C4A6E),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(14),
+                bottomLeft: Radius.circular(14),
               ),
             ),
-          ],
-        ),
+            child: Text('Rp',
+                style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white)),
+          ),
+          Expanded(
+            child: TextField(
+              controller: _amountCtrl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF5C4A6E)),
+              decoration: InputDecoration(
+                hintText: '0',
+                hintStyle: GoogleFonts.nunito(color: const Color(0xFFCCBBDD)),
+                border: InputBorder.none,
+                contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -802,21 +888,16 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
       id: widget.existing?.id ?? const Uuid().v4(),
       title: title,
       amount: amount,
-      content: _contentCtrl.text.trim().isEmpty
-          ? null
-          : _contentCtrl.text.trim(),
+      content: _contentCtrl.text.trim().isEmpty ? null : _contentCtrl.text.trim(),
       label: _label,
       isPinned: widget.existing?.isPinned ?? false,
       isChecked: widget.existing?.isChecked ?? false,
       reminderDate: _reminderDate,
-      reminderType:
-      _reminderDate != null ? _reminderType : ReminderType.none,
+      reminderType: _reminderDate != null ? _reminderType : ReminderType.none,
       createdAt: widget.existing?.createdAt ?? DateTime.now(),
     );
 
     await widget.onSave(note);
-
-    // onSave sudah pop sheet, jadi cek mounted dulu
     if (mounted) setState(() => _saving = false);
   }
 }

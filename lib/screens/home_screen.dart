@@ -109,11 +109,37 @@ class _HorizontalRootState extends State<_HorizontalRoot> {
 
 // ─── Dashboard Page ───────────────────────────────────────────
 
-class _DashboardPage extends ConsumerWidget {
+class _DashboardPage extends ConsumerStatefulWidget {
   const _DashboardPage();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends ConsumerState<_DashboardPage> {
+
+  Future<void> _openNotes() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(builder: (_) => const NotesScreen()),
+    );
+    if (!mounted) return;
+    if (result != null && result['payNow'] == true) {
+      final note = result['note'] as NoteModel;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ExpenseScreen(
+            prefillTitle: note.title,
+            prefillAmount: note.amount,
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final totalIncomeAsync = ref.watch(totalIncomeProvider);
     final totalExpenseAsync = ref.watch(totalExpenseProvider);
     final userNameAsync = ref.watch(userNameProvider);
@@ -229,25 +255,7 @@ class _DashboardPage extends ConsumerWidget {
                 title: 'Catatan Keuangan',
                 subtitle: 'Pengingat tagihan & rencana keuangan',
                 color: const Color(0xFFEDE0FF),
-                onTap: () async {
-                  final result = await Navigator.push<Map<String, dynamic>>(
-                    context,
-                    MaterialPageRoute(builder: (_) => const NotesScreen()),
-                  );
-                  if (result != null && result['payNow'] == true) {
-                    final note = result['note'] as NoteModel;
-                    // ignore: use_build_context_synchronously
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ExpenseScreen(
-                          prefillTitle: note.title,
-                          prefillAmount: note.amount,
-                        ),
-                      ),
-                    );
-                  }
-                },
+                onTap: _openNotes,
               ),
 
               const SizedBox(height: 20),
