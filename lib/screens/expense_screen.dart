@@ -9,6 +9,7 @@ import '../providers/transaction_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/category_provider.dart';
 import 'history_screen.dart';
+import '../utils/wallet_logo.dart';
 
 class ExpenseScreen extends ConsumerStatefulWidget {
   // ✅ Tambah parameter prefill untuk fitur "Bayar Sekarang"
@@ -341,6 +342,7 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
     );
   }
 
+  // ✅ HANYA BAGIAN INI YANG DIUBAH — ganti emoji → walletLogo()
   Widget _buildWalletGrid(List<WalletModel> wallets) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -349,7 +351,7 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
-          childAspectRatio: 2.4,
+          childAspectRatio: 2.2,   // ✅ 2.4 → 2.2 agar logo muat
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
         ),
@@ -371,12 +373,19 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
                       offset: const Offset(0, 2))
                 ],
               ),
-              child: Column(
+              // ✅ Column → Row: logo kiri, nama kanan
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(wallet.emoji, style: const TextStyle(fontSize: 16)),
-                  const SizedBox(height: 2),
-                  Text(wallet.name,
+                  SizedBox(
+                    width: 26,
+                    height: 26,
+                    child: walletLogo(wallet.id, size: 26), // ✅ logo, bukan emoji
+                  ),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      wallet.name,
                       style: GoogleFonts.nunito(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
@@ -384,7 +393,9 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
                             ? Colors.white
                             : const Color(0xFF5C4A6E),
                       ),
-                      overflow: TextOverflow.ellipsis),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ),
