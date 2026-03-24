@@ -229,10 +229,25 @@ class _DashboardPage extends ConsumerWidget {
                 title: 'Catatan Keuangan',
                 subtitle: 'Pengingat tagihan & rencana keuangan',
                 color: const Color(0xFFEDE0FF),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NotesScreen()),
-                ),
+                onTap: () async {
+                  final result = await Navigator.push<Map<String, dynamic>>(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotesScreen()),
+                  );
+                  if (result != null && result['payNow'] == true) {
+                    final note = result['note'] as NoteModel;
+                    // ignore: use_build_context_synchronously
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ExpenseScreen(
+                          prefillTitle: note.title,
+                          prefillAmount: note.amount,
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
 
               const SizedBox(height: 20),

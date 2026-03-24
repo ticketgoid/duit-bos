@@ -11,7 +11,15 @@ import '../providers/category_provider.dart';
 import 'history_screen.dart';
 
 class ExpenseScreen extends ConsumerStatefulWidget {
-  const ExpenseScreen({super.key});
+  // ✅ Tambah parameter prefill untuk fitur "Bayar Sekarang"
+  final String? prefillTitle;
+  final double? prefillAmount;
+
+  const ExpenseScreen({
+    super.key,
+    this.prefillTitle,
+    this.prefillAmount,
+  });
 
   @override
   ConsumerState<ExpenseScreen> createState() => _ExpenseScreenState();
@@ -35,6 +43,14 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
   @override
   void initState() {
     super.initState();
+    // ✅ Prefill amount & note dari catatan keuangan jika ada
+    if (widget.prefillAmount != null && widget.prefillAmount! > 0) {
+      _amount = widget.prefillAmount!.toInt().toString();
+    }
+    if (widget.prefillTitle != null && widget.prefillTitle!.isNotEmpty) {
+      _noteController.text = widget.prefillTitle!;
+    }
+
     _hintController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -127,17 +143,29 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ));
+      // ✅ Jika dibuka dari "Bayar Sekarang", pop balik setelah simpan
+      if (widget.prefillTitle != null) {
+        Navigator.pop(context, true);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Jika dibuka dari "Bayar Sekarang" (ada prefill), gunakan Scaffold biasa
+    // bukan PageView agar bisa di-pop dengan benar
+    if (widget.prefillTitle != null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFFD6E0),
+        body: SafeArea(child: _buildExpensePage()),
+      );
+    }
+
     return PageView(
       scrollDirection: Axis.vertical,
       physics: const BouncingScrollPhysics(),
       children: [
         _buildExpensePage(),
-        // ✅ FIX Bug 2: pakai wrapper yang invalidate provider saat visible
         _RefreshableHistory(type: HistoryType.expense),
       ],
     );
@@ -165,14 +193,40 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                     child: Row(children: [
+                      // ✅ Tombol back hanya muncul saat dibuka dari prefill
+                      if (widget.prefillTitle != null) ...[
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [BoxShadow(
+                                  color: Colors.black.withOpacity(0.06),
+                                  blurRadius: 6)],
+                            ),
+                            child: const Icon(Icons.arrow_back_ios_new,
+                                size: 16, color: Color(0xFF5C4A6E)),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
                       const Text('💸', style: TextStyle(fontSize: 28)),
                       const SizedBox(width: 8),
-                      Text('Pengeluaran',
+                      Expanded(
+                        child: Text(
+                          widget.prefillTitle != null
+                              ? 'Bayar: ${widget.prefillTitle}'
+                              : 'Pengeluaran',
                           style: GoogleFonts.nunito(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF5C4A6E),
-                          )),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ]),
                   ),
 
@@ -253,28 +307,30 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
 
                   const SizedBox(height: 12),
 
-                  Center(
-                    child: AnimatedBuilder(
-                      animation: _hintAnimation,
-                      builder: (context, child) => Transform.translate(
-                        offset: Offset(0, _hintAnimation.value),
-                        child: child,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(20),
+                  // ✅ Hint swipe hanya muncul saat mode normal (bukan prefill)
+                  if (widget.prefillTitle == null)
+                    Center(
+                      child: AnimatedBuilder(
+                        animation: _hintAnimation,
+                        builder: (context, child) => Transform.translate(
+                          offset: Offset(0, _hintAnimation.value),
+                          child: child,
                         ),
-                        child: Text('👆  swipe bawah ke atas untuk riwayat',
-                            style: GoogleFonts.nunito(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF9B8AAE))),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text('👆  swipe bawah ke atas untuk riwayat',
+                              style: GoogleFonts.nunito(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF9B8AAE))),
+                        ),
                       ),
                     ),
-                  ),
                   const SizedBox(height: 20),
                 ],
               ),

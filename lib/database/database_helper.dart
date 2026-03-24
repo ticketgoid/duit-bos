@@ -25,9 +25,25 @@ class DatabaseHelper {
       version: 3,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 3) {
+        if (oldVersion < 2) {
           await db.execute(
               'UPDATE wallets SET showInExpense = 0, showInIncome = 0');
+        }
+        if (oldVersion < 3) {
+          await db.execute('''
+      CREATE TABLE IF NOT EXISTS notes (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        amount REAL NOT NULL DEFAULT 0,
+        content TEXT,
+        label TEXT NOT NULL,
+        isPinned INTEGER NOT NULL DEFAULT 0,
+        isChecked INTEGER NOT NULL DEFAULT 0,
+        reminderDate TEXT,
+        reminderType TEXT NOT NULL DEFAULT 'none',
+        createdAt TEXT NOT NULL
+      )
+    ''');
         }
       },
     );

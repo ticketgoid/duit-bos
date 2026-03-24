@@ -791,23 +791,32 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
     final amountStr = _amountCtrl.text.trim();
     if (title.isEmpty) return;
     if (amountStr.isEmpty) return;
-    final amount = double.tryParse(amountStr.replaceAll('.', '').replaceAll(',', ''));
+    final amount = double.tryParse(
+        amountStr.replaceAll('.', '').replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
 
+    if (!mounted) return;
     setState(() => _saving = true);
+
     final note = NoteModel(
       id: widget.existing?.id ?? const Uuid().v4(),
       title: title,
       amount: amount,
-      content: _contentCtrl.text.trim().isEmpty ? null : _contentCtrl.text.trim(),
+      content: _contentCtrl.text.trim().isEmpty
+          ? null
+          : _contentCtrl.text.trim(),
       label: _label,
       isPinned: widget.existing?.isPinned ?? false,
       isChecked: widget.existing?.isChecked ?? false,
       reminderDate: _reminderDate,
-      reminderType: _reminderDate != null ? _reminderType : ReminderType.none,
+      reminderType:
+      _reminderDate != null ? _reminderType : ReminderType.none,
       createdAt: widget.existing?.createdAt ?? DateTime.now(),
     );
+
     await widget.onSave(note);
-    setState(() => _saving = false);
+
+    // onSave sudah pop sheet, jadi cek mounted dulu
+    if (mounted) setState(() => _saving = false);
   }
 }
