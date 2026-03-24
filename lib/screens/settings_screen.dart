@@ -820,16 +820,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                               controller: _categoryTabController,
                               indicator: BoxDecoration(
                                 color: const Color(0xFF5C4A6E),
-                                borderRadius:
-                                BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              indicatorSize: TabBarIndicatorSize.tab,  // ← tambah ini
+                              dividerColor: Colors.transparent,
                               labelColor: Colors.white,
-                              unselectedLabelColor:
-                              const Color(0xFF9B8AAE),
+                              unselectedLabelColor: const Color(0xFF9B8AAE),
                               labelStyle: GoogleFonts.nunito(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700),
-                              dividerColor: Colors.transparent,
+                              unselectedLabelStyle: GoogleFonts.nunito(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700),
+                              padding: EdgeInsets.zero,               // ← tambah ini
                               tabs: const [
                                 Tab(text: '💸 Pengeluaran'),
                                 Tab(text: '💰 Pemasukan'),
