@@ -4,11 +4,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/transaction_provider.dart';
 import '../providers/preferences_provider.dart';
+import '../providers/note_provider.dart';
+import '../models/note_model.dart';
 import 'history_screen.dart';
 import 'expense_screen.dart';
 import 'income_screen.dart';
 import 'wallet_screen.dart';
 import 'settings_screen.dart';
+import 'notes_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -104,6 +107,8 @@ class _HorizontalRootState extends State<_HorizontalRoot> {
   }
 }
 
+// ─── Dashboard Page ───────────────────────────────────────────
+
 class _DashboardPage extends ConsumerWidget {
   const _DashboardPage();
 
@@ -127,6 +132,7 @@ class _DashboardPage extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Header ──────────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -188,10 +194,12 @@ class _DashboardPage extends ConsumerWidget {
 
               const SizedBox(height: 24),
 
+              // ── Balance Card (tidak diubah) ──────────────────
               _buildBalanceCard(totalIncomeAsync, totalExpenseAsync, fmt),
 
               const SizedBox(height: 20),
 
+              // ── Summary Cards (tidak diubah) ─────────────────
               Row(children: [
                 Expanded(
                     child: _buildSummaryCard(
@@ -212,9 +220,25 @@ class _DashboardPage extends ConsumerWidget {
                     )),
               ]),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
 
-              _buildHints(),
+              // ── Tombol Catatan Keuangan ───────────────────────
+              _buildMenuButton(
+                context,
+                emoji: '📝',
+                title: 'Catatan Keuangan',
+                subtitle: 'Pengingat tagihan & rencana keuangan',
+                color: const Color(0xFFEDE0FF),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotesScreen()),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── Section Catatan Pinned di Dashboard ──────────
+              const _NotesDashboardSection(),
             ],
           ),
         ),
@@ -222,41 +246,51 @@ class _DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildHints() {
-    final hints = [
-      ('👇', 'Tarik ke bawah', '👜 Dompet'),
-      ('👆', 'Tarik ke atas', '📋 Riwayat Semua'),
-      ('👈', 'Geser ke kiri', '💰 Pemasukan'),
-      ('👉', 'Geser ke kanan', '💸 Pengeluaran'),
-    ];
-    return Column(
-      children: hints.map((h) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.7),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(children: [
-            Text(h.$1, style: const TextStyle(fontSize: 18)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(h.$2,
-                  style: GoogleFonts.nunito(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF5C4A6E),
-                  )),
+  Widget _buildMenuButton(
+      BuildContext context, {
+        required String emoji,
+        required String title,
+        required String subtitle,
+        required Color color,
+        required VoidCallback onTap,
+      }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2))
+          ],
+        ),
+        child: Row(children: [
+          Text(emoji, style: const TextStyle(fontSize: 28)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: GoogleFonts.nunito(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF5C4A6E),
+                    )),
+                Text(subtitle,
+                    style: GoogleFonts.nunito(
+                        fontSize: 12, color: const Color(0xFF9B8AAE))),
+              ],
             ),
-            Text(h.$3,
-                style: GoogleFonts.nunito(
-                  fontSize: 12,
-                  color: const Color(0xFF9B8AAE),
-                )),
-          ]),
-        );
-      }).toList(),
+          ),
+          const Icon(Icons.chevron_right,
+              color: Color(0xFFCCBBDD), size: 22),
+        ]),
+      ),
     );
   }
 
@@ -368,6 +402,134 @@ class _DashboardPage extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Notes Dashboard Section ──────────────────────────────────
+
+class _NotesDashboardSection extends ConsumerWidget {
+  const _NotesDashboardSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notesAsync = ref.watch(pinnedNotesProvider);
+    final fmt = NumberFormat.currency(
+        locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+    return notesAsync.when(
+      data: (notes) {
+        if (notes.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text('📌 Catatan Disorot',
+                  style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF5C4A6E),
+                  )),
+              const Spacer(),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotesScreen()),
+                ),
+                child: Text('Semua →',
+                    style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF9B8AAE))),
+              ),
+            ]),
+            const SizedBox(height: 10),
+            ...notes.map((note) => _MiniNoteCard(note: note, fmt: fmt)),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+// ─── Mini Note Card (di dashboard) ───────────────────────────
+
+class _MiniNoteCard extends StatelessWidget {
+  final NoteModel note;
+  final NumberFormat fmt;
+
+  const _MiniNoteCard({required this.note, required this.fmt});
+
+  @override
+  Widget build(BuildContext context) {
+    final isOverdue = note.reminderDate != null &&
+        note.reminderDate!.isBefore(DateTime.now()) &&
+        !note.isChecked;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: isOverdue
+            ? Border.all(color: Colors.redAccent.withOpacity(0.4), width: 1.5)
+            : null,
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Row(children: [
+        if (note.isPinned)
+          const Padding(
+            padding: EdgeInsets.only(right: 6),
+            child: Text('📌', style: TextStyle(fontSize: 14)),
+          ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(note.title,
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF5C4A6E),
+                    decoration:
+                    note.isChecked ? TextDecoration.lineThrough : null,
+                  )),
+              const SizedBox(height: 2),
+              Text(fmt.format(note.amount),
+                  style: GoogleFonts.nunito(
+                      fontSize: 12, color: const Color(0xFF9B8AAE))),
+            ],
+          ),
+        ),
+        if (note.reminderDate != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: isOverdue
+                  ? const Color(0xFFFFD6E0)
+                  : const Color(0xFFF0E6FF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              DateFormat('d MMM', 'id_ID').format(note.reminderDate!),
+              style: GoogleFonts.nunito(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isOverdue
+                      ? Colors.redAccent
+                      : const Color(0xFF9B8AAE)),
+            ),
+          ),
+      ]),
     );
   }
 }

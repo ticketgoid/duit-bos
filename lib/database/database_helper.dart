@@ -21,11 +21,10 @@ class DatabaseHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 2, // ← naik dari 1 ke 2
+      version: 3,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          // Reset semua wallet ke nonaktif — biarkan onboarding yang atur
+        if (oldVersion < 3) {
           await db.execute(
               'UPDATE wallets SET showInExpense = 0, showInIncome = 0');
         }
@@ -67,6 +66,22 @@ class DatabaseHelper {
         type TEXT NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE notes (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        amount REAL NOT NULL DEFAULT 0,
+        content TEXT,
+        label TEXT NOT NULL,
+        isPinned INTEGER NOT NULL DEFAULT 0,
+        isChecked INTEGER NOT NULL DEFAULT 0,
+        reminderDate TEXT,
+        reminderType TEXT NOT NULL DEFAULT 'none',
+        createdAt TEXT NOT NULL
+      )
+    ''');
+
 
     await _insertDefaultWallets(db);
     await _insertDefaultCategories(db);
