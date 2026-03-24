@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database_helper.dart';
 import '../providers/preferences_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/transaction_provider.dart';
 import 'onboarding_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -41,7 +40,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCurrentSettings();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCurrentSettings();
+    });
   }
 
   @override
@@ -51,53 +52,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _loadCurrentSettings() async {
-    // Load nama user
-    @override
-    void initState() {
-      super.initState();
-      // ✅ defer agar ref sudah ready
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadCurrentSettings();
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name') ?? 'Bos';
+    if (mounted) _nameController.text = name;
+
+    final wallets = await DatabaseHelper.instance.getAllWallets();
+    final active = wallets
+        .where((w) => w.showInExpense || w.showInIncome)
+        .map((w) => w.id)
+        .toSet();
+
+    if (mounted) {
+      setState(() {
+        _activeWallets = Set.from(active);
+        _originalActiveWallets = Set.from(active);
+        _loaded = true;
       });
     }
+  }
 
-    Future<void> _loadCurrentSettings() async {
-      // ✅ Load nama user langsung dari SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      final name = prefs.getString('user_name') ?? 'Bos';
-      if (mounted) _nameController.text = name;
-
-      // Load wallet aktif dari DB
-      final wallets = await DatabaseHelper.instance.getAllWallets();
-      final active = wallets
-          .where((w) => w.showInExpense || w.showInIncome)
-          .map((w) => w.id)
-          .toSet();
-
-      if (mounted) {
-        setState(() {
-          _activeWallets = Set.from(active);
-          _originalActiveWallets = Set.from(active);
-          _loaded = true;
-        });
-      }
-    }
-
-
-
-    void _toggleWallet(String id) {
+  void _toggleWallet(String id) {
     setState(() {
       if (_activeWallets.contains(id)) {
         if (_activeWallets.length > 1) {
           _activeWallets.remove(id);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Minimal 1 wallet harus aktif!',
-                style: GoogleFonts.nunito()),
+            content: Text('Minimal 1 wallet harus aktif!', style: GoogleFonts.nunito()),
             backgroundColor: const Color(0xFFFF8FAB),
             behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ));
         }
       } else {
@@ -105,12 +89,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _activeWallets.add(id);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Maksimal 6 wallet aktif!',
-                style: GoogleFonts.nunito()),
+            content: Text('Maksimal 6 wallet aktif!', style: GoogleFonts.nunito()),
             backgroundColor: const Color(0xFFFF8FAB),
             behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ));
         }
       }
@@ -123,16 +105,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         content: Text('Nama tidak boleh kosong!', style: GoogleFonts.nunito()),
         backgroundColor: const Color(0xFFFF8FAB),
         behavior: SnackBarBehavior.floating,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ));
       return;
     }
 
-    // Cek wallet yang dinonaktifkan (ada di original tapi tidak di active)
     final deactivated = _originalActiveWallets.difference(_activeWallets);
 
-    // Jika ada wallet yang dinonaktifkan dan punya data, tampilkan konfirmasi
     if (deactivated.isNotEmpty) {
       final confirm = await _showDeactivateConfirm(deactivated);
       if (confirm != true) return;
@@ -140,12 +119,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     setState(() => _isSaving = true);
 
-    // Hapus data wallet yang dinonaktifkan
     for (final walletId in deactivated) {
       await DatabaseHelper.instance.deleteWalletData(walletId);
     }
 
-    // Update visibility semua wallet
     for (final w in _allWallets) {
       final isActive = _activeWallets.contains(w['id']!);
       await DatabaseHelper.instance.updateWalletVisibility(
@@ -155,12 +132,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
     }
 
-    // Update nama user
     await ref
         .read(preferencesNotifierProvider.notifier)
         .updateUserName(_nameController.text.trim());
 
-    // Invalidate semua provider terkait
     ref.invalidate(walletNotifierProvider);
     ref.invalidate(allWalletsProvider);
     ref.invalidate(expenseWalletProvider);
@@ -168,6 +143,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.invalidate(allTransactionsProvider);
     ref.invalidate(expenseTransactionsProvider);
     ref.invalidate(incomeTransactionsProvider);
+    ref.invalidate(totalIncomeProvider);
+    ref.invalidate(totalExpenseProvider);
     ref.invalidate(userNameProvider);
 
     if (mounted) {
@@ -176,12 +153,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _originalActiveWallets = Set.from(_activeWallets);
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:
-        Text('Pengaturan tersimpan! ✅', style: GoogleFonts.nunito()),
+        content: Text('Pengaturan tersimpan! ✅', style: GoogleFonts.nunito()),
         backgroundColor: const Color(0xFF4CAF50),
         behavior: SnackBarBehavior.floating,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ));
       Navigator.pop(context);
     }
@@ -196,12 +171,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Hapus data wallet?',
             style: GoogleFonts.nunito(
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF5C4A6E))),
+                fontWeight: FontWeight.w800, color: const Color(0xFF5C4A6E))),
         content: Text(
           'Wallet $names akan dinonaktifkan.\n\n'
               'Semua transaksi dan saldo wallet tersebut akan dihapus permanen. '
@@ -218,8 +191,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.redAccent,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: Text('Hapus & Lanjutkan',
                 style: GoogleFonts.nunito(
@@ -234,12 +206,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Reset Aplikasi?',
             style: GoogleFonts.nunito(
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF5C4A6E))),
+                fontWeight: FontWeight.w800, color: const Color(0xFF5C4A6E))),
         content: Text(
           'Semua data transaksi, saldo, dan pengaturan akan dihapus permanen. '
               'Aplikasi akan kembali ke setup awal.',
@@ -255,8 +225,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.redAccent,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: Text('Reset',
                 style: GoogleFonts.nunito(
@@ -268,7 +237,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (confirm != true) return;
 
-    // Hapus semua data
     for (final w in _allWallets) {
       await DatabaseHelper.instance.deleteWalletData(w['id']!);
       await DatabaseHelper.instance.updateWalletVisibility(
@@ -278,7 +246,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
     }
 
-    // Reset onboarding
     await ref.read(preferencesNotifierProvider.notifier).resetOnboarding();
 
     if (mounted) {
@@ -297,7 +264,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ──────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
               child: Row(children: [
@@ -309,9 +275,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
-                        BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
-                            blurRadius: 6)
+                        BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6)
                       ],
                     ),
                     child: const Icon(Icons.arrow_back_ios_new,
@@ -338,7 +302,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Nama User ──────────────────────
                     _sectionLabel('👤 Nama Kamu'),
                     const SizedBox(height: 8),
                     Container(
@@ -375,7 +338,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                     const SizedBox(height: 24),
 
-                    // ── Pilih Wallet Aktif ─────────────
                     Row(children: [
                       _sectionLabel('👜 Wallet Aktif'),
                       const Spacer(),
@@ -402,12 +364,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     Text(
                       'Wallet dinonaktifkan akan menghapus semua datanya',
                       style: GoogleFonts.nunito(
-                          fontSize: 11,
-                          color: const Color(0xFF9B8AAE)),
+                          fontSize: 11, color: const Color(0xFF9B8AAE)),
                     ),
                     const SizedBox(height: 12),
 
-                    // Grid wallet
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -421,13 +381,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       itemCount: _allWallets.length,
                       itemBuilder: (context, index) {
                         final w = _allWallets[index];
-                        final isActive =
-                        _activeWallets.contains(w['id']);
+                        final isActive = _activeWallets.contains(w['id']);
                         return GestureDetector(
                           onTap: () => _toggleWallet(w['id']!),
                           child: AnimatedContainer(
-                            duration:
-                            const Duration(milliseconds: 200),
+                            duration: const Duration(milliseconds: 200),
                             decoration: BoxDecoration(
                               color: isActive
                                   ? const Color(0xFF5C4A6E)
@@ -441,12 +399,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               ],
                             ),
                             child: Column(
-                              mainAxisAlignment:
-                              MainAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(w['emoji']!,
-                                    style: const TextStyle(
-                                        fontSize: 26)),
+                                    style: const TextStyle(fontSize: 26)),
                                 const SizedBox(height: 4),
                                 Text(w['name']!,
                                     style: GoogleFonts.nunito(
@@ -471,26 +427,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                     const SizedBox(height: 32),
 
-                    // ── Tombol Simpan ──────────────────
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _isSaving ? null : _saveSettings,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF5C4A6E),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(20)),
+                              borderRadius: BorderRadius.circular(20)),
                         ),
                         child: _isSaving
                             ? const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2))
+                                color: Colors.white, strokeWidth: 2))
                             : Text('Simpan Pengaturan ✅',
                             style: GoogleFonts.nunito(
                               fontSize: 15,
@@ -501,13 +453,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
 
                     const SizedBox(height: 16),
-
-                    // ── Divider ────────────────────────
                     Divider(color: Colors.black.withOpacity(0.08)),
-
                     const SizedBox(height: 16),
 
-                    // ── Danger Zone ────────────────────
                     _sectionLabel('⚠️ Danger Zone'),
                     const SizedBox(height: 12),
                     SizedBox(
@@ -515,13 +463,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       child: OutlinedButton(
                         onPressed: _resetApp,
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                              color: Colors.redAccent),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14),
+                          side: const BorderSide(color: Colors.redAccent),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(20)),
+                              borderRadius: BorderRadius.circular(20)),
                         ),
                         child: Text('Reset Semua Data 🗑️',
                             style: GoogleFonts.nunito(
