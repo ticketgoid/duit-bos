@@ -256,6 +256,16 @@ class DatabaseHelper {
     return await db.delete('categories', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<int> updateCategory(CategoryModel c) async {
+    final db = await database;
+    return await db.update(
+      'categories',
+      {'name': c.name, 'emoji': c.emoji},
+      where: 'id = ?',
+      whereArgs: [c.id],
+    );
+  }
+
   // ─── SUMMARY ─────────────────────────────────────────────────
 
   Future<double> getTotalBalance() async {
