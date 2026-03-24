@@ -7,8 +7,6 @@ import '../providers/transaction_provider.dart';
 
 enum HistoryType { all, expense, income }
 
-const int _kPerPage = 8;
-
 class HistoryScreen extends ConsumerStatefulWidget {
   final HistoryType type;
   const HistoryScreen({super.key, required this.type});
@@ -55,6 +53,17 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       case HistoryType.expense: return const Color(0xFFFF8FAB);
       case HistoryType.income:  return const Color(0xFF4CAF50);
     }
+  }
+
+  // ✅ FIX Bug 2: hitung perPage dari tinggi layar
+  // tinggi card ≈ 72px (padding v:12 + konten ~48px + margin bottom 8px)
+  // sisihkan: header ~56px + page indicator ~44px + safe area ~20px
+  int _calcPerPage(double availableHeight) {
+    const double cardHeight = 72.0;
+    const double overhead = 160.0; // ✅ dinaikkan dari 120 → 160 untuk buffer
+    final usable = availableHeight - overhead;
+    final count = (usable / cardHeight).floor();
+    return count.clamp(4, 12);
   }
 
   Future<void> _confirmDelete(
@@ -110,97 +119,107 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     return Scaffold(
       backgroundColor: _bgColor,
       body: SafeArea(
-        child: transactionsAsync.when(
-          data: (transactions) {
-            final totalPages = (transactions.length / _kPerPage).ceil();
-            final pageCount = totalPages == 0 ? 1 : totalPages;
+        // ✅ FIX Bug 2: LayoutBuilder baca tinggi tersedia
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final perPage = _calcPerPage(constraints.maxHeight);
 
-            if (_currentPage >= pageCount && _currentPage > 0) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) setState(() => _currentPage = pageCount - 1);
-              });
-            }
+            return transactionsAsync.when(
+              data: (transactions) {
+                final totalPages = (transactions.length / perPage).ceil();
+                final pageCount = totalPages == 0 ? 1 : totalPages;
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Header ────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(_title,
-                          style: GoogleFonts.nunito(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF5C4A6E),
-                          )),
-                      if (transactions.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.7),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${transactions.length} transaksi',
-                            style: GoogleFonts.nunito(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: _accentColor,
+                if (_currentPage >= pageCount && _currentPage > 0) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) setState(() => _currentPage = pageCount - 1);
+                  });
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Header ──────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(_title,
+                              style: GoogleFonts.nunito(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF5C4A6E),
+                              )),
+                          if (transactions.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${transactions.length} transaksi',
+                                style: GoogleFonts.nunito(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: _accentColor,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                        ],
+                      ),
+                    ),
 
-                const SizedBox(height: 8),
+                    const SizedBox(height: 10),
 
-                // ── List (PageView horizontal) ─────────
-                Expanded(
-                  child: transactions.isEmpty
-                      ? _buildEmpty()
-                      : PageView.builder(
-                    controller: _pageController,
-                    itemCount: pageCount,
-                    onPageChanged: (i) =>
-                        setState(() => _currentPage = i),
-                    itemBuilder: (context, pageIndex) {
-                      final start = pageIndex * _kPerPage;
-                      final end = (start + _kPerPage)
-                          .clamp(0, transactions.length);
-                      final pageItems =
-                      transactions.sublist(start, end);
+                    // ── List (PageView horizontal) ───────
+                    Expanded(
+                      child: transactions.isEmpty
+                          ? _buildEmpty()
+                          : PageView.builder(
+                        controller: _pageController,
+                        itemCount: pageCount,
+                        onPageChanged: (i) =>
+                            setState(() => _currentPage = i),
+                        itemBuilder: (context, pageIndex) {
+                          final start = pageIndex * perPage;
+                          final end = (start + perPage)
+                              .clamp(0, transactions.length);
+                          final pageItems =
+                          transactions.sublist(start, end);
 
-                      return ListView.builder(
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding:
-                        const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                        itemCount: pageItems.length,
-                        itemBuilder: (context, index) =>
-                            _buildTransactionCard(
-                                context, ref, pageItems[index]),
-                      );
-                    },
-                  ),
-                ),
+                          return ListView.builder(
+                            physics:
+                            const NeverScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(
+                                20, 4, 20, 0),
+                            itemCount: pageItems.length,
+                            itemBuilder: (context, index) =>
+                                _buildTransactionCard(
+                                    context, ref, pageItems[index]),
+                          );
+                        },
+                      ),
+                    ),
 
-                // ── Page Indicator ─────────────────────
-                if (transactions.isNotEmpty && pageCount > 1)
-                  _buildPageIndicator(pageCount),
+                    // ── Page Indicator ───────────────────
+                    if (transactions.isNotEmpty && pageCount > 1)
+                      _buildPageIndicator(pageCount),
 
-                const SizedBox(height: 8),
-              ],
+                    const SizedBox(height: 8),
+                  ],
+                );
+              },
+              loading: () =>
+              const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Text('Terjadi kesalahan',
+                    style: GoogleFonts.nunito(
+                        color: const Color(0xFF5C4A6E))),
+              ),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
-            child: Text('Terjadi kesalahan',
-                style: GoogleFonts.nunito(color: const Color(0xFF5C4A6E))),
-          ),
         ),
       ),
     );
@@ -214,12 +233,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         children: [
           GestureDetector(
             onTap: _currentPage > 0
-                ? () {
-              _pageController.previousPage(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            }
+                ? () => _pageController.previousPage(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            )
                 : null,
             child: Container(
               padding: const EdgeInsets.all(6),
@@ -242,11 +259,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ...List.generate(pageCount, (i) {
             final isActive = i == _currentPage;
             return GestureDetector(
-              onTap: () {
-                _pageController.animateToPage(i,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut);
-              },
+              onTap: () => _pageController.animateToPage(i,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -266,12 +281,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
           GestureDetector(
             onTap: _currentPage < pageCount - 1
-                ? () {
-              _pageController.nextPage(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            }
+                ? () => _pageController.nextPage(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            )
                 : null,
             child: Container(
               padding: const EdgeInsets.all(6),
@@ -341,12 +354,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     return GestureDetector(
       onLongPress: () => _confirmDelete(context, ref, t),
       child: Container(
-        // ✅ FIX Bug 3: margin & padding diperkecil agar lebih banyak muat
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        // ✅ FIX Bug 2: ukuran card wajar, total ~72px per item
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -358,20 +371,20 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: isExpense
                     ? const Color(0xFFFFD6E0)
                     : const Color(0xFFB8F0C8),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(13),
               ),
               child: Center(
                 child: Text(isExpense ? '💸' : '💰',
-                    style: const TextStyle(fontSize: 18)),
+                    style: const TextStyle(fontSize: 20)),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,14 +398,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   if (t.note != null && t.note!.isNotEmpty)
                     Text(t.note!,
                         style: GoogleFonts.nunito(
-                          fontSize: 11,
+                          fontSize: 12,
                           color: const Color(0xFF9B8AAE),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   Text(dateFormat.format(t.date),
                       style: GoogleFonts.nunito(
-                        fontSize: 10,
+                        fontSize: 11,
                         color: const Color(0xFFBBAACE),
                       )),
                 ],

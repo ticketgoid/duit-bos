@@ -64,7 +64,7 @@ class WalletScreen extends ConsumerWidget {
 
                 return Column(
                   children: [
-                    // Total saldo card
+                    // Total saldo card — tidak diubah
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 20),
                       padding: const EdgeInsets.symmetric(
@@ -115,7 +115,7 @@ class WalletScreen extends ConsumerWidget {
 
                     const SizedBox(height: 20),
 
-                    // ✅ Grid 2 baris × 3 kolom fixed (max 6)
+                    // ✅ FIX Bug 4: 2 kolom, aspect ratio landscape, layout Row
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: GridView.builder(
@@ -123,10 +123,10 @@ class WalletScreen extends ConsumerWidget {
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 1.15,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
+                          crossAxisCount: 2,      // ✅ 3 → 2 kolom
+                          childAspectRatio: 1.35, // ✅ card lebih lebar
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
                         ),
                         itemCount: activeWallets.length.clamp(0, 6),
                         itemBuilder: (context, index) {
@@ -175,6 +175,8 @@ class WalletScreen extends ConsumerWidget {
 
   Widget _buildWalletCard(WalletModel w, NumberFormat fmt) {
     return Container(
+      // ✅ FIX Bug 4: padding lebih besar, layout Row (emoji kiri, teks kanan)
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -186,29 +188,37 @@ class WalletScreen extends ConsumerWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         children: [
-          Text(w.emoji, style: const TextStyle(fontSize: 28)),
-          const SizedBox(height: 4),
-          Text(w.name,
-              style: GoogleFonts.nunito(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF5C4A6E),
-              ),
-              overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 2),
-          Text(
-            fmt.format(w.balance),
-            style: GoogleFonts.nunito(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: w.balance >= 0
-                  ? const Color(0xFF4CAF50)
-                  : const Color(0xFFFF8FAB),
+          Text(w.emoji, style: const TextStyle(fontSize: 32)), // ✅ 28 → 32
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(w.name,
+                    style: GoogleFonts.nunito(
+                      fontSize: 13, // ✅ 11 → 13
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF5C4A6E),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1),
+                const SizedBox(height: 3),
+                Text(
+                  fmt.format(w.balance),
+                  style: GoogleFonts.nunito(
+                    fontSize: 12, // ✅ 10 → 12
+                    fontWeight: FontWeight.w800,
+                    color: w.balance >= 0
+                        ? const Color(0xFF4CAF50)
+                        : const Color(0xFFFF8FAB),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

@@ -18,8 +18,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // ✅ PageController di-dispose dengan benar
   late final PageController _verticalController;
+
+  // ✅ FIX Bug 1: track apakah vertical scroll luar di-enable
+  bool _verticalEnabled = true;
 
   @override
   void initState() {
@@ -33,20 +35,27 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // ✅ FIX Bug 1: callback dari _HorizontalRoot
+  void _onHorizontalPageChanged(int index) {
+    // index 1 = Dashboard → enable vertical scroll
+    // index 0 = Income, index 2 = Expense → disable vertical scroll
+    setState(() {
+      _verticalEnabled = index == 1;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return PageView(
       controller: _verticalController,
       scrollDirection: Axis.vertical,
-      physics: const BouncingScrollPhysics(),
+      // ✅ FIX Bug 1: disable physics saat di Income/Expense
+      physics: _verticalEnabled
+          ? const BouncingScrollPhysics()
+          : const NeverScrollableScrollPhysics(),
       children: [
-        // index 0 — swipe dari atas ke bawah = Dompet
         const WalletScreen(),
-
-        // index 1 — default = Horizontal (Expense | Dashboard | Income)
-        _HorizontalRoot(),
-
-        // index 2 — swipe dari bawah ke atas = Riwayat Semua
+        _HorizontalRoot(onPageChanged: _onHorizontalPageChanged),
         const HistoryScreen(type: HistoryType.all),
       ],
     );
@@ -54,12 +63,16 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HorizontalRoot extends StatefulWidget {
+  // ✅ FIX Bug 1: terima callback dari HomeScreen
+  final void Function(int index) onPageChanged;
+
+  const _HorizontalRoot({required this.onPageChanged});
+
   @override
   State<_HorizontalRoot> createState() => _HorizontalRootState();
 }
 
 class _HorizontalRootState extends State<_HorizontalRoot> {
-  // ✅ PageController di-dispose dengan benar
   late final PageController _horizontalController;
 
   @override
@@ -80,10 +93,12 @@ class _HorizontalRootState extends State<_HorizontalRoot> {
       controller: _horizontalController,
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
+      // ✅ FIX Bug 1: kirim index ke HomeScreen saat halaman berubah
+      onPageChanged: widget.onPageChanged,
       children: [
-        const IncomeScreen(),    // index 0 — swipe kanan ke kiri
-        const _DashboardPage(),  // index 1 — default
-        const ExpenseScreen(),   // index 2 — swipe kiri ke kanan
+        const IncomeScreen(),
+        const _DashboardPage(),
+        const ExpenseScreen(),
       ],
     );
   }
@@ -112,7 +127,6 @@ class _DashboardPage extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Greeting + tombol Settings ──────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -146,8 +160,6 @@ class _DashboardPage extends ConsumerWidget {
                           )),
                     ],
                   ),
-
-                  // ✅ Tombol Settings
                   GestureDetector(
                     onTap: () => Navigator.push(
                       context,
@@ -176,12 +188,10 @@ class _DashboardPage extends ConsumerWidget {
 
               const SizedBox(height: 24),
 
-              // ── Balance Card ─────────────────────────
               _buildBalanceCard(totalIncomeAsync, totalExpenseAsync, fmt),
 
               const SizedBox(height: 20),
 
-              // ── Ringkasan ────────────────────────────
               Row(children: [
                 Expanded(
                     child: _buildSummaryCard(
@@ -204,7 +214,6 @@ class _DashboardPage extends ConsumerWidget {
 
               const SizedBox(height: 40),
 
-              // ── Hint navigasi ────────────────────────
               _buildHints(),
             ],
           ),
@@ -224,8 +233,7 @@ class _DashboardPage extends ConsumerWidget {
       children: hints.map((h) {
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
-          padding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.7),
             borderRadius: BorderRadius.circular(16),
