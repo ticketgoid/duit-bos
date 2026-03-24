@@ -281,6 +281,29 @@ class DatabaseHelper {
     );
   }
 
+  // ─── NOTES ───────────────────────────────────────────────────
+
+  Future<List<NoteModel>> getAllNotes() async {
+    final db = await database;
+    final maps = await db.query('notes', orderBy: 'isPinned DESC, createdAt DESC');
+    return maps.map((m) => NoteModel.fromMap(m)).toList();
+  }
+
+  Future<int> insertNote(NoteModel n) async {
+    final db = await database;
+    return await db.insert('notes', n.toMap());
+  }
+
+  Future<int> updateNote(NoteModel n) async {
+    final db = await database;
+    return await db.update('notes', n.toMap(), where: 'id = ?', whereArgs: [n.id]);
+  }
+
+  Future<int> deleteNote(String id) async {
+    final db = await database;
+    return await db.delete('notes', where: 'id = ?', whereArgs: [id]);
+  }
+
   // ─── SUMMARY ─────────────────────────────────────────────────
 
   Future<double> getTotalBalance() async {
