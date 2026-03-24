@@ -86,7 +86,6 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
       return;
     }
 
-    // ✅ Validasi saldo mencukupi
     final amount = double.parse(_amount);
     if (amount > _selectedWallet!.balance) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -123,8 +122,7 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
     if (mounted) {
       FocusScope.of(context).unfocus();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:
-        Text('Pengeluaran tersimpan! 💸', style: GoogleFonts.nunito()),
+        content: Text('Pengeluaran tersimpan! 💸', style: GoogleFonts.nunito()),
         backgroundColor: const Color(0xFF4CAF50),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -139,7 +137,8 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
       physics: const BouncingScrollPhysics(),
       children: [
         _buildExpensePage(),
-        const HistoryScreen(type: HistoryType.expense),
+        // ✅ FIX Bug 2: pakai wrapper yang invalidate provider saat visible
+        _RefreshableHistory(type: HistoryType.expense),
       ],
     );
   }
@@ -163,7 +162,6 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Header ──────────────────────────
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                     child: Row(children: [
@@ -180,7 +178,6 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
 
                   const SizedBox(height: 14),
 
-                  // ── Nominal + Catatan ────────────────
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     padding: const EdgeInsets.symmetric(
@@ -222,7 +219,6 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
 
                   const SizedBox(height: 14),
 
-                  // ── Label Wallet ─────────────────────
                   Padding(
                     padding: const EdgeInsets.only(left: 24, bottom: 8),
                     child: Text('Keluar uang pake apa? 💳',
@@ -232,7 +228,6 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
                             color: const Color(0xFF5C4A6E))),
                   ),
 
-                  // ✅ Wallet Grid 2×3 fixed (no scroll)
                   walletsAsync.when(
                     data: (wallets) => _buildWalletGrid(wallets),
                     loading: () => const SizedBox(height: 100),
@@ -241,7 +236,6 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
 
                   const SizedBox(height: 14),
 
-                  // ── Label Kategori ───────────────────
                   Padding(
                     padding: const EdgeInsets.only(left: 24, bottom: 8),
                     child: Text('Buat apa? 🤔',
@@ -259,7 +253,6 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
 
                   const SizedBox(height: 12),
 
-                  // ✅ Fix hint text
                   Center(
                     child: AnimatedBuilder(
                       animation: _hintAnimation,
@@ -292,7 +285,6 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
     );
   }
 
-  // ✅ Grid 2 baris × 3 kolom fixed
   Widget _buildWalletGrid(List<WalletModel> wallets) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -326,8 +318,7 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(wallet.emoji,
-                      style: const TextStyle(fontSize: 16)),
+                  Text(wallet.emoji, style: const TextStyle(fontSize: 16)),
                   const SizedBox(height: 2),
                   Text(wallet.name,
                       style: GoogleFonts.nunito(
@@ -367,9 +358,7 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
                 padding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF5C4A6E)
-                      : Colors.white,
+                  color: isSelected ? const Color(0xFF5C4A6E) : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
@@ -464,5 +453,32 @@ class _ExpenseScreenState extends ConsumerState<ExpenseScreen>
         ),
       ]),
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ✅ FIX Bug 2: Wrapper yang invalidate provider saat di-swipe
+// ─────────────────────────────────────────────────────────────
+class _RefreshableHistory extends ConsumerStatefulWidget {
+  final HistoryType type;
+  const _RefreshableHistory({required this.type});
+
+  @override
+  ConsumerState<_RefreshableHistory> createState() =>
+      _RefreshableHistoryState();
+}
+
+class _RefreshableHistoryState extends ConsumerState<_RefreshableHistory> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(expenseTransactionsProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return HistoryScreen(type: widget.type);
   }
 }

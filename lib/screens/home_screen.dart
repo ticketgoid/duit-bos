@@ -81,9 +81,9 @@ class _HorizontalRootState extends State<_HorizontalRoot> {
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       children: [
-        const ExpenseScreen(),   // index 0 — swipe kanan ke kiri
+        const IncomeScreen(),    // index 0 — swipe kanan ke kiri
         const _DashboardPage(),  // index 1 — default
-        const IncomeScreen(),    // index 2 — swipe kiri ke kanan
+        const ExpenseScreen(),   // index 2 — swipe kiri ke kanan
       ],
     );
   }
@@ -217,8 +217,8 @@ class _DashboardPage extends ConsumerWidget {
     final hints = [
       ('👇', 'Tarik ke bawah', '👜 Dompet'),
       ('👆', 'Tarik ke atas', '📋 Riwayat Semua'),
-      ('👈', 'Geser ke kiri', '💸 Pengeluaran'),
-      ('👉', 'Geser ke kanan', '💰 Pemasukan'),
+      ('👈', 'Geser ke kiri', '💰 Pemasukan'),
+      ('👉', 'Geser ke kanan', '💸 Pengeluaran'),
     ];
     return Column(
       children: hints.map((h) {

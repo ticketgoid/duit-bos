@@ -7,7 +7,7 @@ import '../providers/transaction_provider.dart';
 
 enum HistoryType { all, expense, income }
 
-const int _kPerPage = 10;
+const int _kPerPage = 8;
 
 class HistoryScreen extends ConsumerStatefulWidget {
   final HistoryType type;
@@ -64,7 +64,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Hapus transaksi?',
-            style: GoogleFonts.nunito(fontWeight: FontWeight.w800,
+            style: GoogleFonts.nunito(
+                fontWeight: FontWeight.w800,
                 color: const Color(0xFF5C4A6E))),
         content: Text(
           'Transaksi ini akan dihapus permanen dan saldo wallet akan dikoreksi.',
@@ -84,8 +85,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   borderRadius: BorderRadius.circular(12)),
             ),
             child: Text('Hapus',
-                style: GoogleFonts.nunito(color: Colors.white,
-                    fontWeight: FontWeight.w700)),
+                style: GoogleFonts.nunito(
+                    color: Colors.white, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -111,11 +112,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       body: SafeArea(
         child: transactionsAsync.when(
           data: (transactions) {
-            // Hitung total halaman
             final totalPages = (transactions.length / _kPerPage).ceil();
             final pageCount = totalPages == 0 ? 1 : totalPages;
 
-            // Jika currentPage melebihi total setelah delete, koreksi
             if (_currentPage >= pageCount && _currentPage > 0) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) setState(() => _currentPage = pageCount - 1);
@@ -127,7 +126,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               children: [
                 // ── Header ────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -158,7 +157,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
                 // ── List (PageView horizontal) ─────────
                 Expanded(
@@ -177,9 +176,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       transactions.sublist(start, end);
 
                       return ListView.builder(
-                        // ✅ No scroll vertikal
                         physics: const NeverScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                        padding:
+                        const EdgeInsets.fromLTRB(20, 4, 20, 0),
                         itemCount: pageItems.length,
                         itemBuilder: (context, index) =>
                             _buildTransactionCard(
@@ -193,30 +192,26 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 if (transactions.isNotEmpty && pageCount > 1)
                   _buildPageIndicator(pageCount),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
               ],
             );
           },
-          loading: () =>
-          const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(
             child: Text('Terjadi kesalahan',
-                style: GoogleFonts.nunito(
-                    color: const Color(0xFF5C4A6E))),
+                style: GoogleFonts.nunito(color: const Color(0xFF5C4A6E))),
           ),
         ),
       ),
     );
   }
 
-  // ── Page Indicator dots + tombol prev/next ─────────────────
   Widget _buildPageIndicator(int pageCount) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Tombol prev
           GestureDetector(
             onTap: _currentPage > 0
                 ? () {
@@ -244,7 +239,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
           const SizedBox(width: 8),
 
-          // Dots
           ...List.generate(pageCount, (i) {
             final isActive = i == _currentPage;
             return GestureDetector(
@@ -270,7 +264,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
           const SizedBox(width: 8),
 
-          // Tombol next
           GestureDetector(
             onTap: _currentPage < pageCount - 1
                 ? () {
@@ -298,7 +291,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
           const SizedBox(width: 12),
 
-          // Label halaman
           Text(
             'Hal ${_currentPage + 1} / $pageCount',
             style: GoogleFonts.nunito(
@@ -336,7 +328,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     );
   }
 
-  // ✅ Long press → popup konfirmasi hapus (ganti swipe)
   Widget _buildTransactionCard(
       BuildContext context, WidgetRef ref, TransactionModel t) {
     final isExpense = t.type == TransactionType.expense;
@@ -350,15 +341,16 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     return GestureDetector(
       onLongPress: () => _confirmDelete(context, ref, t),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(16),
+        // ✅ FIX Bug 3: margin & padding diperkecil agar lebih banyak muat
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
+              blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
@@ -366,41 +358,41 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 color: isExpense
                     ? const Color(0xFFFFD6E0)
                     : const Color(0xFFB8F0C8),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
                 child: Text(isExpense ? '💸' : '💰',
-                    style: const TextStyle(fontSize: 22)),
+                    style: const TextStyle(fontSize: 18)),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(t.title,
                       style: GoogleFonts.nunito(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF5C4A6E),
                       )),
                   if (t.note != null && t.note!.isNotEmpty)
                     Text(t.note!,
                         style: GoogleFonts.nunito(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: const Color(0xFF9B8AAE),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   Text(dateFormat.format(t.date),
                       style: GoogleFonts.nunito(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: const Color(0xFFBBAACE),
                       )),
                 ],
@@ -412,14 +404,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 Text(
                   '${isExpense ? '-' : '+'}${currencyFormat.format(t.amount)}',
                   style: GoogleFonts.nunito(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: isExpense
                         ? const Color(0xFFFF8FAB)
                         : const Color(0xFF4CAF50),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text('hold to delete',
                     style: GoogleFonts.nunito(
                       fontSize: 9,

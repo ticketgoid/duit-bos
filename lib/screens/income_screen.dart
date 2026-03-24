@@ -122,7 +122,8 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
       physics: const BouncingScrollPhysics(),
       children: [
         _buildIncomePage(),
-        const HistoryScreen(type: HistoryType.income),
+        // ✅ FIX Bug 2: pakai wrapper yang invalidate provider saat visible
+        _RefreshableHistory(type: HistoryType.income),
       ],
     );
   }
@@ -212,7 +213,6 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
                             color: const Color(0xFF5C4A6E))),
                   ),
 
-                  // ✅ Wallet Grid 2×3 fixed
                   walletsAsync.when(
                     data: (wallets) => _buildWalletGrid(wallets),
                     loading: () => const SizedBox(height: 100),
@@ -238,7 +238,6 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
 
                   const SizedBox(height: 12),
 
-                  // ✅ Fix hint text
                   Center(
                     child: AnimatedBuilder(
                       animation: _hintAnimation,
@@ -271,7 +270,6 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
     );
   }
 
-  // ✅ Grid 2 baris × 3 kolom fixed
   Widget _buildWalletGrid(List<WalletModel> wallets) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -293,9 +291,7 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF4CAF50)
-                    : Colors.white,
+                color: isSelected ? const Color(0xFF4CAF50) : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -307,8 +303,7 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(wallet.emoji,
-                      style: const TextStyle(fontSize: 16)),
+                  Text(wallet.emoji, style: const TextStyle(fontSize: 16)),
                   const SizedBox(height: 2),
                   Text(wallet.name,
                       style: GoogleFonts.nunito(
@@ -348,9 +343,7 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
                 padding: const EdgeInsets.symmetric(
                     horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF5C4A6E)
-                      : Colors.white,
+                  color: isSelected ? const Color(0xFF5C4A6E) : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
@@ -445,5 +438,32 @@ class _IncomeScreenState extends ConsumerState<IncomeScreen>
         ),
       ]),
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ✅ FIX Bug 2: Wrapper yang invalidate provider saat di-swipe
+// ─────────────────────────────────────────────────────────────
+class _RefreshableHistory extends ConsumerStatefulWidget {
+  final HistoryType type;
+  const _RefreshableHistory({required this.type});
+
+  @override
+  ConsumerState<_RefreshableHistory> createState() =>
+      _RefreshableHistoryState();
+}
+
+class _RefreshableHistoryState extends ConsumerState<_RefreshableHistory> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(incomeTransactionsProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return HistoryScreen(type: widget.type);
   }
 }
