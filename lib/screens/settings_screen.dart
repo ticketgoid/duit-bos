@@ -10,6 +10,7 @@ import '../providers/wallet_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../providers/category_provider.dart';
 import 'onboarding_screen.dart';
+import '../utils/wallet_logo.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -196,23 +197,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(w['emoji']!,
-                                style: const TextStyle(fontSize: 24)),
+                            SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: walletLogo(w['id']!, size: 36),
+                            ),
                             const SizedBox(height: 4),
                             Text(w['name']!,
                                 style: GoogleFonts.nunito(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
-                                  color: isActive
-                                      ? Colors.white
-                                      : const Color(0xFF5C4A6E),
+                                  color: isActive ? Colors.white : const Color(0xFF5C4A6E),
                                 ),
                                 textAlign: TextAlign.center),
                             if (isActive)
-                              Text('✓',
-                                  style: GoogleFonts.nunito(
-                                      fontSize: 10,
-                                      color: Colors.white70)),
+                              Text('✓', style: GoogleFonts.nunito(fontSize: 10, color: Colors.white70)),
                           ],
                         ),
                       ),

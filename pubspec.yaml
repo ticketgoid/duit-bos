@@ -45,6 +45,15 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/DuitBos.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#F0E6FF"
+  adaptive_icon_foreground: "assets/DuitBos.png"
 
 flutter:
   uses-material-design: true
@@ -57,3 +66,13 @@ flutter:
   assets:
     - assets/images/
     - assets/fonts/
+    - assets/logos/BCA.png
+    - assets/logos/BRI.png
+    - assets/logos/Dana.png
+    - assets/logos/GoPay.png
+    - assets/logos/JAGO.png
+    - assets/logos/Mandiri.png
+    - assets/logos/OVO.png
+    - assets/logos/SeaBank.png
+    - assets/logos/ShoppePay.png
+    - assets/Logo-DuitBos-10.jpg

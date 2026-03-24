@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/wallet_provider.dart';
 import '../models/wallet_model.dart';
+import '../utils/wallet_logo.dart';
 
 class WalletScreen extends ConsumerWidget {
   const WalletScreen({super.key});
@@ -190,7 +191,11 @@ class WalletScreen extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          Text(w.emoji, style: const TextStyle(fontSize: 32)), // ✅ 28 → 32
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: walletLogo(w.id, size: 40),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
