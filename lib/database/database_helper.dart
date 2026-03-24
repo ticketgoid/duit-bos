@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import '../models/transaction_model.dart';
 import '../models/wallet_model.dart';
 import '../models/category_model.dart';
+import '../models/note_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();

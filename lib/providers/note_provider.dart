@@ -9,8 +9,9 @@ final allNotesProvider = FutureProvider<List<NoteModel>>((ref) async {
 final pinnedNotesProvider = FutureProvider<List<NoteModel>>((ref) async {
   final all = await DatabaseHelper.instance.getAllNotes();
   // pinned dulu, lalu by createdAt desc, ambil maks 3
-  final sorted = [...all.where((n) => n.isPinned),
-    ...all.where((n) => !n.isPinned)];
+  final pinned = all.where((n) => n.isPinned).toList();
+  final unpinned = all.where((n) => !n.isPinned).toList();
+  final sorted = [...pinned, ...unpinned];
   return sorted.take(3).toList();
 });
 
