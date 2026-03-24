@@ -456,10 +456,26 @@ class _NotesDashboardSection extends ConsumerWidget {
                   )),
               const Spacer(),
               GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NotesScreen()),
-                ),
+                // ✅ ini — handle result payNow
+                onTap: () async {
+                  final result = await Navigator.push<Map<String, dynamic>>(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotesScreen()),
+                  );
+                  if (!context.mounted) return;
+                  if (result != null && result['payNow'] == true) {
+                    final note = result['note'] as NoteModel;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ExpenseScreen(
+                          prefillTitle: note.title,
+                          prefillAmount: note.amount,
+                        ),
+                      ),
+                    );
+                  }
+                },
                 child: Text('Semua →',
                     style: GoogleFonts.nunito(
                         fontSize: 12,

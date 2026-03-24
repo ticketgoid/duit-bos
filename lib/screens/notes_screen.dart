@@ -226,17 +226,28 @@ class NotesScreen extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       useSafeArea: true,
-      builder: (ctx) => _NoteFormSheet(
-        existing: note,
-        onSave: (newNote) async {
-          if (note == null) {
-            await ref.read(noteNotifierProvider.notifier).addNote(newNote);
-          } else {
-            await ref.read(noteNotifierProvider.notifier).updateNote(newNote);
-          }
-          await scheduleNoteNotifications(newNote);
-          if (ctx.mounted) Navigator.pop(ctx);
-        },
+      isDismissible: true,
+      enableDrag: true,
+      // ✅ HAPUS AnimatedPadding — ganti Scaffold native
+      builder: (ctx) => Scaffold(
+        backgroundColor: Colors.transparent,
+        // ✅ Scaffold handle keyboard secara native — tidak ada Flutter rebuild
+        resizeToAvoidBottomInset: true,
+        body: Align(
+          alignment: Alignment.bottomCenter,
+          child: _NoteFormSheet(
+            existing: note,
+            onSave: (newNote) async {
+              if (note == null) {
+                await ref.read(noteNotifierProvider.notifier).addNote(newNote);
+              } else {
+                await ref.read(noteNotifierProvider.notifier).updateNote(newNote);
+              }
+              await scheduleNoteNotifications(newNote);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+          ),
+        ),
       ),
     );
   }
@@ -282,13 +293,11 @@ class _NoteCard extends StatelessWidget {
     final isOverdue = note.reminderDate != null &&
         note.reminderDate!.isBefore(now) &&
         !note.isChecked;
-    // ✅ FIX 2: status lunas vs belum bayar vs overdue
     final isPaid = note.isChecked;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        // ✅ FIX 2: warna kartu berbeda berdasarkan status
         color: isPaid ? const Color(0xFFF5FFF7) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: isOverdue
@@ -321,7 +330,6 @@ class _NoteCard extends StatelessWidget {
                         color: const Color(0xFF5C4A6E))),
               ),
               const SizedBox(width: 6),
-              // ✅ FIX 2: badge status
               if (isPaid)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -359,9 +367,7 @@ class _NoteCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isPaid ? const Color(0xFF4CAF50) : Colors.transparent,
                     border: Border.all(
-                      color: isPaid
-                          ? const Color(0xFF4CAF50)
-                          : const Color(0xFFCCBBDD),
+                      color: isPaid ? const Color(0xFF4CAF50) : const Color(0xFFCCBBDD),
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(6),
@@ -388,8 +394,7 @@ class _NoteCard extends StatelessWidget {
               Text(note.content!,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.nunito(
-                      fontSize: 12, color: const Color(0xFF9B8AAE))),
+                  style: GoogleFonts.nunito(fontSize: 12, color: const Color(0xFF9B8AAE))),
             ],
 
             const SizedBox(height: 10),
@@ -436,7 +441,6 @@ class _NoteCard extends StatelessWidget {
             const SizedBox(height: 10),
 
             Row(children: [
-              // ✅ FIX 2: Bayar Sekarang hanya muncul jika belum lunas
               if (!isPaid)
                 Expanded(
                   child: GestureDetector(
@@ -444,25 +448,20 @@ class _NoteCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: isOverdue
-                            ? Colors.redAccent
-                            : const Color(0xFF5C4A6E),
+                        color: isOverdue ? Colors.redAccent : const Color(0xFF5C4A6E),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
                         child: Text(
                           isOverdue ? '⚠️ Bayar Segera!' : '💸 Bayar Sekarang',
                           style: GoogleFonts.nunito(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white,
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              // ✅ FIX 2: jika sudah lunas tampilkan info lunas
               if (isPaid)
                 Expanded(
                   child: Container(
@@ -474,15 +473,13 @@ class _NoteCard extends StatelessWidget {
                     child: Center(
                       child: Text('✅ Sudah Dibayar',
                           style: GoogleFonts.nunito(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 12, fontWeight: FontWeight.w700,
                             color: const Color(0xFF4CAF50),
                           )),
                     ),
                   ),
                 ),
-              if (!isPaid) const SizedBox(width: 8),
-              if (isPaid) const SizedBox(width: 8),
+              const SizedBox(width: 8),
               GestureDetector(
                 onTap: onEdit,
                 child: Container(
@@ -500,9 +497,7 @@ class _NoteCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: note.isPinned
-                        ? const Color(0xFFFFD6E0)
-                        : const Color(0xFFF0E6FF),
+                    color: note.isPinned ? const Color(0xFFFFD6E0) : const Color(0xFFF0E6FF),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(note.isPinned ? '📌' : '📍',
@@ -550,7 +545,6 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
   DateTime? _reminderDate;
   bool _saving = false;
 
-  // ✅ FIX 4: formatter untuk nominal rupiah
   final _amountFmt = NumberFormat('#,###', 'id_ID');
   bool _isFormattingAmount = false;
 
@@ -560,16 +554,11 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
     final e = widget.existing;
     _titleCtrl = TextEditingController(text: e?.title ?? '');
     _contentCtrl = TextEditingController(text: e?.content ?? '');
-    // ✅ FIX 4: init dengan format rupiah jika sudah ada nilai
     _amountCtrl = TextEditingController(
-        text: e != null && e.amount > 0
-            ? _amountFmt.format(e.amount.toInt())
-            : '');
+        text: e != null && e.amount > 0 ? _amountFmt.format(e.amount.toInt()) : '');
     _label = e?.label ?? NoteLabel.reminder;
     _reminderType = e?.reminderType ?? ReminderType.none;
     _reminderDate = e?.reminderDate;
-
-    // ✅ FIX 4: listener untuk format otomatis saat ketik
     _amountCtrl.addListener(_formatAmount);
   }
 
@@ -599,168 +588,154 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX 1: Gunakan AnimatedPadding untuk transisi keyboard yang smooth
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0D0F0),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+    // ✅ TIDAK ada padding keyboard di sini — sudah dihandle AnimatedPadding di _showNoteSheet
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: Column(
+        mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0D0F0),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(widget.existing == null ? '📝 Catatan Baru' : 'Edit Catatan',
-                  style: GoogleFonts.nunito(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF5C4A6E))),
-              const SizedBox(height: 16),
+            ),
+            const SizedBox(height: 16),
+            Text(widget.existing == null ? '📝 Catatan Baru' : 'Edit Catatan',
+                style: GoogleFonts.nunito(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF5C4A6E))),
+            const SizedBox(height: 16),
 
-              _label2('Judul'),
-              _field(_titleCtrl, 'Nama catatan...'),
-              const SizedBox(height: 12),
+            _label2('Judul'),
+            _field(_titleCtrl, 'Nama catatan...'),
+            const SizedBox(height: 12),
 
-              // ✅ FIX 4: nominal dengan prefix Rp dan format titik
-              _label2('Nominal (wajib)'),
-              _amountField(),
-              const SizedBox(height: 12),
+            _label2('Nominal (wajib)'),
+            _amountField(),
+            const SizedBox(height: 12),
 
-              _label2('Catatan (opsional)'),
-              _field(_contentCtrl, 'Tulis detail...', maxLines: 3),
-              const SizedBox(height: 12),
+            _label2('Catatan (opsional)'),
+            _field(_contentCtrl, 'Tulis detail...', maxLines: 3),
+            const SizedBox(height: 12),
 
-              // ✅ FIX 3: Label diperbesar dan lebih rapi dengan runSpacing
-              _label2('Label'),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: NoteLabel.values.map((l) {
-                  final names = {
-                    NoteLabel.reminder: '🔔 Pengingat',
-                    NoteLabel.budget: '💰 Budget',
-                    NoteLabel.plan: '📋 Rencana',
-                    NoteLabel.other: '📌 Lainnya',
-                  };
-                  return GestureDetector(
-                    onTap: () => setState(() => _label = l),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10), // ✅ padding lebih besar
-                      decoration: BoxDecoration(
-                        color: _label == l
-                            ? const Color(0xFF5C4A6E)
-                            : const Color(0xFFF0E6FF),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(names[l]!,
-                          style: GoogleFonts.nunito(
-                            fontSize: 14, // ✅ font lebih besar
-                            fontWeight: FontWeight.w700,
-                            color: _label == l
-                                ? Colors.white
-                                : const Color(0xFF9B8AAE),
-                          )),
+            _label2('Label'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: NoteLabel.values.map((l) {
+                final names = {
+                  NoteLabel.reminder: '🔔 Pengingat',
+                  NoteLabel.budget: '💰 Budget',
+                  NoteLabel.plan: '📋 Rencana',
+                  NoteLabel.other: '📌 Lainnya',
+                };
+                return GestureDetector(
+                  onTap: () => setState(() => _label = l),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _label == l ? const Color(0xFF5C4A6E) : const Color(0xFFF0E6FF),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 12),
-
-              _label2('Tanggal Jatuh Tempo'),
-              GestureDetector(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _reminderDate ?? DateTime.now(),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
-                  );
-                  if (picked != null) setState(() => _reminderDate = picked);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0E6FF),
-                    borderRadius: BorderRadius.circular(14),
+                    child: Text(names[l]!,
+                        style: GoogleFonts.nunito(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: _label == l ? Colors.white : const Color(0xFF9B8AAE),
+                        )),
                   ),
-                  child: Row(children: [
-                    const Text('📅', style: TextStyle(fontSize: 16)),
-                    const SizedBox(width: 8),
-                    Text(
-                      _reminderDate != null
-                          ? DateFormat('d MMMM yyyy', 'id_ID').format(_reminderDate!)
-                          : 'Pilih tanggal...',
-                      style: GoogleFonts.nunito(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: _reminderDate != null
-                            ? const Color(0xFF5C4A6E)
-                            : const Color(0xFFCCBBDD),
-                      ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+
+            _label2('Tanggal Jatuh Tempo'),
+            GestureDetector(
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _reminderDate ?? DateTime.now(),
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                );
+                if (picked != null) setState(() => _reminderDate = picked);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0E6FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(children: [
+                  const Text('📅', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 8),
+                  Text(
+                    _reminderDate != null
+                        ? DateFormat('d MMMM yyyy', 'id_ID').format(_reminderDate!)
+                        : 'Pilih tanggal...',
+                    style: GoogleFonts.nunito(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _reminderDate != null
+                          ? const Color(0xFF5C4A6E)
+                          : const Color(0xFFCCBBDD),
                     ),
-                  ]),
-                ),
+                  ),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            if (_reminderDate != null) ...[
+              _label2('Pengingat'),
+              Column(
+                children: [
+                  _reminderOption(ReminderType.none, '🔕 Tidak ada pengingat'),
+                  _reminderOption(ReminderType.onDay, '🔔 Saat jatuh tempo saja'),
+                  _reminderOption(ReminderType.h3Daily, '📅 Tiap hari mulai H-3'),
+                  _reminderOption(ReminderType.h5Daily, '📅 Tiap hari mulai H-5'),
+                  _reminderOption(ReminderType.h7Daily, '📅 Tiap hari mulai H-7'),
+                ],
               ),
               const SizedBox(height: 12),
-
-              if (_reminderDate != null) ...[
-                _label2('Pengingat'),
-                Column(
-                  children: [
-                    _reminderOption(ReminderType.none, '🔕 Tidak ada pengingat'),
-                    _reminderOption(ReminderType.onDay, '🔔 Saat jatuh tempo saja'),
-                    _reminderOption(ReminderType.h3Daily, '📅 Tiap hari mulai H-3'),
-                    _reminderOption(ReminderType.h5Daily, '📅 Tiap hari mulai H-5'),
-                    _reminderOption(ReminderType.h7Daily, '📅 Tiap hari mulai H-7'),
-                  ],
-                ),
-                const SizedBox(height: 12),
-              ],
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _saving ? null : _save,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF5C4A6E),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: _saving
-                      ? const SizedBox(
-                      width: 20, height: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                      : Text('Simpan',
-                      style: GoogleFonts.nunito(
-                          fontSize: 15, fontWeight: FontWeight.w700)),
-                ),
-              ),
             ],
-          ),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _saving ? null : _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5C4A6E),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: _saving
+                    ? const SizedBox(
+                    width: 20, height: 20,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text('Simpan',
+                    style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // ✅ FIX 4: field nominal khusus dengan prefix Rp
   Widget _amountField() {
     return Container(
       decoration: BoxDecoration(
@@ -780,9 +755,7 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
             ),
             child: Text('Rp',
                 style: GoogleFonts.nunito(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white)),
+                    fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white)),
           ),
           Expanded(
             child: TextField(
@@ -790,15 +763,12 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               style: GoogleFonts.nunito(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF5C4A6E)),
+                  fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF5C4A6E)),
               decoration: InputDecoration(
                 hintText: '0',
                 hintStyle: GoogleFonts.nunito(color: const Color(0xFFCCBBDD)),
                 border: InputBorder.none,
-                contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
             ),
           ),
@@ -814,9 +784,7 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: _reminderType == type
-              ? const Color(0xFF5C4A6E)
-              : const Color(0xFFF0E6FF),
+          color: _reminderType == type ? const Color(0xFF5C4A6E) : const Color(0xFFF0E6FF),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(children: [
@@ -825,9 +793,7 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
                 style: GoogleFonts.nunito(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: _reminderType == type
-                      ? Colors.white
-                      : const Color(0xFF9B8AAE),
+                  color: _reminderType == type ? Colors.white : const Color(0xFF9B8AAE),
                 )),
           ),
           if (_reminderType == type)
@@ -841,9 +807,7 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
     padding: const EdgeInsets.only(bottom: 6),
     child: Text(text,
         style: GoogleFonts.nunito(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF9B8AAE))),
+            fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF9B8AAE))),
   );
 
   Widget _field(TextEditingController ctrl, String hint,
@@ -858,15 +822,12 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
         maxLines: maxLines,
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
         style: GoogleFonts.nunito(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF5C4A6E)),
+            fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF5C4A6E)),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.nunito(color: const Color(0xFFCCBBDD)),
           border: InputBorder.none,
-          contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
       ),
     );
@@ -877,8 +838,7 @@ class _NoteFormSheetState extends State<_NoteFormSheet> {
     final amountStr = _amountCtrl.text.trim();
     if (title.isEmpty) return;
     if (amountStr.isEmpty) return;
-    final amount = double.tryParse(
-        amountStr.replaceAll('.', '').replaceAll(',', ''));
+    final amount = double.tryParse(amountStr.replaceAll('.', '').replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
 
     if (!mounted) return;
