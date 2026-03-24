@@ -5,6 +5,7 @@ import '../database/database_helper.dart';
 import '../providers/preferences_provider.dart';
 import '../providers/wallet_provider.dart';
 import 'home_screen.dart';
+import '../utils/wallet_logo.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -312,8 +313,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(w['emoji']!,
-                            style: const TextStyle(fontSize: 28)),
+                        SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: walletLogo(w['id']!, size: 36),
+                        ),
                         const SizedBox(height: 6),
                         Text(w['name']!,
                             style: GoogleFonts.nunito(
